@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Serbo Equb</title>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- LOGIN PAGE -->
+
+  <div id="loginPage">
+
+    <div class="card">
+
+      <h2>Login</h2>
+
+      <input
+        type="text"
+        id="username"
+        placeholder="Username"
+      >
+
+      <input
+        type="password"
+        id="loginPassword"
+        placeholder="Password"
+      >
+
+      <select id="role">
+
+        <option value="admin">
+          Admin
+        </option>
+
+        <option value="member">
+          Member
+        </option>
+
+      </select>
+
+      <button onclick="login()">
+        Login
+      </button>
+
+    </div>
+
+  </div>
+
+
+  <!-- MEMBER DASHBOARD -->
+
+  <div
+    id="memberDashboard"
+    style="display:none;"
+  >
+  <div class="profile-header">
+    
+
+  
+ <div class="profile-wrapper">
+
+  <img
+    id="memberImage"
+    src=""
+    class="profile-pic"
+  >
+
+  <button
+    class="camera-btn"
+    onclick="document.getElementById('memberProfileInput').click()"
+  >
+    📷
+  </button>
+
+</div>
+
+ 
+
+</div>
+<div class="member-info">
+
+  <h1 id="memberName">
+    Member Name
+  </h1>
+
+  <p id="memberId">
+    Member ID
+  </p>
+
+  <span class="member-badge">
+    Equb Member
+  </span>
+
+</div>
+<br>
+  <input
+  type="file"
+  id="memberProfileInput"
+  accept="image/*"
+  onchange="changeProfilePicture()"
+  style="display:none;"
+>
+
+
+
+  
+
+<div class="stats-container">
+
+  <div id="equbDayCard"></div>
+
+  <div id="debtCard"></div>
+
+</div>
+
+<div id="notificationCard"></div>
+<div class="profile-stats">
+
+  <div class="stat-card">
+    <h3 id="totalPayments">0</h3>
+    <p>Payments</p>
+  </div>
+
+  <div class="stat-card">
+    <h3 id="currentDebt">0</h3>
+    <p>Debt</p>
+  </div>
+
+  <div class="stat-card">
+    <h3 id="receiptCount">0</h3>
+    <p>Receipts</p>
+  </div>
+
+  <div class="stat-card">
+    <h3 id="accountStatus">Paid</h3>
+    <p>Status</p>
+  </div>
+
+</div>
+<div id="paymentSection">
+  
+
+
+</div>
+
+    
+    <h3>My Receipts</h3>
+
+    <ul id="memberReceiptList"></ul>
+
+   <div class="bottom-menu">
+
+  <button onclick="showHome(); setActiveMenu(this)">
+  🏠 Home
+</button>
+
+<button onclick="showPayments(); setActiveMenu(this)">
+  💳 Payments
+</button>
+
+<button onclick="showReceipts(); setActiveMenu(this)">
+  📄 Receipts
+</button>
+
+<button onclick="showProfile(); setActiveMenu(this)">
+  👤 Profile
+</button>
+
+</div> 
+    <button onclick="logout()">
+      Logout
+    </button>
+
+  </div>
+
+
+  <!-- ADMIN APP -->
+
+  <div
+    class="container"
+    id="app"
+    style="display:none;"
+  >
+
+    <div class="sidebar">
+
+      <button onclick="showSection('dashboard')">
+        Dashboard
+      </button>
+
+      <button onclick="showSection('members')">
+        Members
+      </button>
+
+      <button onclick="logout()">
+        Logout
+      </button>
+
+    </div>
+
+
+    <div class="main-content">
+
+      <div id="dashboardSection">
+
+        <h1>
+          Admin Dashboard
+        </h1>
+
+        <h2>
+          Total Members:
+          <span id="totalMembers">
+            0
+          </span>
+        </h2>
+
+        <h2>
+          Total Money:
+          <span id="totalMoney">
+            0 ETB
+          </span>
+        </h2>
+        <button onclick="startNewDay()">
+          Start New Day
+        </button>
+
+        <div id="groupStats"></div>
+
+      </div>
+
+
+    <div
+  id="membersSection"
+  style="display:none;"
+>
+
+  <div class="card">
+
+    <h2>Add Member</h2>
+
+    <input
+      type="text"
+      id="name"
+      placeholder="Member Name"
+    >
+    <input
+  type="text"
+  id="phone"
+  placeholder="Phone Number"
+/>
+<input
+  type="password"
+  id="memberPassword"
+  placeholder="Password">
+
+    <select id="amount">
+
+  <option value="500">
+    500 ETB
+  </option>
+
+  <option value="1000">
+    1000 ETB
+  </option>
+
+  <option value="2000">
+    2000 ETB
+  </option>
+
+  <option value="5000">
+    5000 ETB
+  </option>
+
+</select>
+    <input
+      type="date"
+      id="dueDate"
+    >
+    <input
+      type="file"
+      id="profilePic"
+      accept="image/*"
+    />
+    
+  
+
+    <select id="status">
+
+      <option value="Paid">
+        Paid
+      </option>
+
+      <option value="Unpaid">
+        Unpaid
+      </option>
+
+    </select>
+
+    <button onclick="addMember()">
+      Add Member
+    </button>
+    <div class="card">
+
+  <h2>Payment History</h2>
+
+  
+</div>
+    <div class="card">
+
+  <h2>Receipts</h2>
+
+  <ul id="receiptList"></ul>
+
+</div>
+
+  </div>
+
+<input
+  type="text"
+  id="search"
+  placeholder="Search member..."
+  onkeyup="searchMember()"
+/>
+  
+  <div class="card">
+   
+    <select id="groupFilter" onchange="filterMembers()">
+
+  <option value="all">
+    All Groups
+  </option>
+
+  <option value="500">
+    500 ETB
+  </option>
+
+  <option value="1000">
+    1000 ETB
+  </option>
+
+  <option value="2000">
+    2000 ETB
+  </option>
+
+  <option value="5000">
+    5000 ETB
+  </option>
+
+</select>
+
+    <h2>Members List</h2>
+
+    <table id="memberTable">
+
+  <thead>
+    <tr>
+      <th>Photo</th>
+      <th>Name</th>
+      <th>Phone</th>
+      <th>Amount</th>
+      <th>Status</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+
+  <tbody id="memberList"></tbody>
+
+</table>
+<div id="pagination">
+
+  <button onclick="prevPage()">
+    Previous
+  </button>
+
+  <span id="pageInfo">
+    Page 1
+  </span>
+
+  <button onclick="nextPage()">
+    Next
+  </button>
+
+</div>
+  </div>
+
+</div>  
+
+    </div>
+
+  </div>
+
+  <script src="script.js"></script>
+ <div
+  id="paymentModal"
+  style="
+    display:none;
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.5);
+  "
+>
+
+  <div
+    style="
+      background:white;
+      width:350px;
+      margin:100px auto;
+      padding:20px;
+      border-radius:10px;
+    "
+  >
+
+    
+
+</div>
+</body>
+
+</html>
