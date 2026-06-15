@@ -1,0 +1,17 @@
+
+{
+  "name": "Serbo Equb",
+  "short_name": "SerboEqub",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#2563eb",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
+
