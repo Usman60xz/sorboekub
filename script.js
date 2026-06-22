@@ -1,3 +1,14 @@
+
+
+import { db } from "./firebase.js";
+
+import {
+  collection,
+  addDoc,
+  getDocs,
+  doc,
+  updateDoc
+} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 let payments =
   JSON.parse(
     localStorage.getItem("payments")
@@ -26,7 +37,7 @@ let receipts =
 let notifications =
   JSON.parse(localStorage.getItem("notifications")) || [];
 
-
+ 
 function saveData(){
 
   localStorage.setItem(
@@ -56,7 +67,7 @@ localStorage.setItem(
 }
 
 
-function login(){
+async function login(){
 
   const username =
     document.getElementById("username").value;
@@ -96,15 +107,30 @@ function login(){
   // MEMBER LOGIN
  else if(role === "member"){
 
-  const member =
-    members.find(
-      member =>
-        member.name.toLowerCase() ===
-          username.toLowerCase()
-        &&
-        member.password === password
-    );
+  const snapshot =
+  await getDocs(
+    collection(db, "members")
+  );
 
+let member = null;
+
+snapshot.forEach((doc) => {
+
+  const data = doc.data();
+  const memberName =
+  (data.name || "").toLowerCase();
+
+if (
+  memberName ===
+    username.toLowerCase() &&
+  data.password === password
+) member = {
+  ...data,
+  docId: doc.id
+};
+
+
+});
   if(member){
 
     document.getElementById("loginPage")
@@ -128,6 +154,8 @@ function login(){
 
 }
 }
+window.login = login;
+
 function logout(){
 
   document.getElementById("app")
@@ -144,9 +172,11 @@ function logout(){
   document.getElementById("password").value = "";
 
 }
+window.logout = logout;
 
 
-function addMember(){
+
+async function addMember(){
 
   const name =
     document.getElementById("name").value;
@@ -168,6 +198,7 @@ function addMember(){
     document.getElementById("profilePic")
     .files[0];
 
+  const memberId = Date.now();
 
   if(name === "" || amount === "" || phone=== ""){
     alert("Please fill all fields");
@@ -176,7 +207,7 @@ function addMember(){
 
 
   const member = {
-  id: Date.now(),
+  id: memberId,
   name: name,
   phone: phone,
   password: password,
@@ -193,13 +224,28 @@ function addMember(){
   
   if(file){
 
-  const reader =
-    new FileReader();
+  const reader = new FileReader();
 
-  reader.onload = function(e){
+  reader.onload = async function(e){
 
-    member.image =
-      e.target.result;
+    member.image = e.target.result;
+
+    await addDoc(
+      collection(db, "members"),
+      {
+        id: memberId,
+        name: name,
+        phone: phone,
+        password: password,
+        amount: amount,
+        status: status,
+        dueDate: dueDate,
+        debt: 0,
+        payments: [],
+        receipts: [],
+        image: member.image
+      }
+    );
 
     members.push(member);
 
@@ -214,6 +260,23 @@ function addMember(){
 }
 
 else{
+
+  await addDoc(
+    collection(db, "members"),
+    {
+      id: memberId,
+      name: name,
+      phone: phone,
+      password: password,
+      amount: amount,
+      status: status,
+      dueDate: dueDate,
+      debt: 0,
+      payments: [],
+      receipts: [],
+      image: ""
+    }
+  );
 
   members.push(member);
 
@@ -497,7 +560,7 @@ if(groupStats){
 }
 
 }
-
+window.loadApp = loadApp;
 
 
 function editMember(index){
@@ -527,7 +590,7 @@ function editMember(index){
   }
 
 }
-
+window.editMember = editMember;
 
 function deleteMember(index){
 
@@ -538,7 +601,7 @@ function deleteMember(index){
   loadApp();
 
 }
-
+window.deleteMember = deleteMember;
 
 function updateStats(){
 
@@ -576,6 +639,7 @@ function updateStats(){
     .innerText = unpaid;
 
 }
+window.updateStats = updateStats;
 
 
 function searchMember(){
@@ -607,6 +671,7 @@ function searchMember(){
   });
 
 }
+window.searchMember = searchMember;
 
 
 function showSection(section){
@@ -635,7 +700,10 @@ function showSection(section){
   }
 
 }
+window.showSection = showSection;
 function showMemberInfo(member){
+  console.log("Logged Member:", member);
+  console.log("Member Image:", member.image);
   
 
   document.getElementById("memberName")
@@ -645,7 +713,7 @@ function showMemberInfo(member){
   "memberId"
 ).innerText =
   "Member ID: EQB-" +
-  member.id;
+  (member.id || member.docId);
    
   document.getElementById(
   "totalPayments"
@@ -808,6 +876,7 @@ receipts.forEach((receipt) => {
   }
 
 });
+window.showMemberInfo = showMemberInfo;
 
 
 function downloadPDF(){
@@ -850,7 +919,8 @@ window.onload = function(){
 }
 }
 
-function changeProfilePicture(){
+
+async function changeProfilePicture(){
 
   const file =
     document.getElementById(
@@ -862,25 +932,50 @@ function changeProfilePicture(){
     return;
   }
 
-  const reader =
-    new FileReader();
+  const reader = new FileReader();
 
-  reader.onload = function(e){
+  reader.onload = async function(e){
 
     const username =
       document.getElementById(
         "memberName"
-      ).innerText.replace("Welcome ","");
+      ).innerText;
 
     const member =
       members.find(
-        member => member.name === username
+        m => m.name === username
       );
 
     if(member){
 
-      member.image =
-        e.target.result;
+      member.image = e.target.result;
+
+      const snapshot = await getDocs(
+        collection(db, "members")
+      );
+
+      let firebaseDocId = null;
+
+      snapshot.forEach((d) => {
+
+        const data = d.data();
+
+        if(data.id === member.id){
+          firebaseDocId = d.id;
+        }
+
+      });
+
+      if(firebaseDocId){
+
+        await updateDoc(
+          doc(db, "members", firebaseDocId),
+          {
+            image: member.image
+          }
+        );
+
+      }
 
       saveData();
 
@@ -897,6 +992,8 @@ function changeProfilePicture(){
   reader.readAsDataURL(file);
 
 }
+
+window.changeProfilePicture = changeProfilePicture;
 
 function editImage(index){
 
@@ -935,8 +1032,9 @@ function editImage(index){
   input.click();
 
 }
+window.editImage = editImage;
 
-function filterMembers(){
+async function filterMembers(){
 
   const selected =
     document.getElementById(
@@ -990,6 +1088,7 @@ function nextPage(){
   }
 
 }
+window.nextPage = nextPage;
 
 function prevPage(){
 
@@ -1002,8 +1101,15 @@ function prevPage(){
   }
 
 }
+window.prevPage = prevPage;
 
-function quickPay(index){
+async function quickPay(index){
+const member =
+    members[index];
+    
+
+
+  
 
   const month =
     prompt("Enter Month");
@@ -1012,8 +1118,7 @@ function quickPay(index){
     return;
   }
 
-  const member =
-    members[index];
+  
     alert("Paying: " + member.name);
   if(!member.payments){
 
@@ -1033,12 +1138,56 @@ function quickPay(index){
       .toLocaleDateString()
 
   });
+const qMember = members[index];
+
+const snapshot = await getDocs(
+  collection(db, "members")
+);
+
+let firebaseDocId = null;
+
+snapshot.forEach((doc) => {
+  const data = doc.data();
+
+ console.log("Local:", qMember.id);
+  console.log("Firebase:", data.id);
+  console.log("Match:", data.id === qMember.id); 
+  
+
+  if(data.id === qMember.id){
+    firebaseDocId = doc.id;
+  }
+});
+
+if(firebaseDocId){
+ 
+ 
   member.debt =
-  Math.max(
-    0,
-    member.debt -
-    parseInt(member.amount)
-  );
+Math.max(
+  0,
+  Number(member.debt) -
+  Number(member.amount)
+);
+
+
+await updateDoc(
+  doc(db, "members", firebaseDocId),
+  {
+    debt: member.debt,
+    payments: member.payments
+  }
+);
+const checkSnap = await getDocs(
+  collection(db, "members")
+);
+
+checkSnap.forEach((d) => {
+  
+});
+
+}
+
+  
   receipts.push({
 
   id: Date.now(),
@@ -1061,7 +1210,7 @@ function quickPay(index){
   alert("Payment Recorded");
 
 }
-
+window.quickPay = quickPay;
 
 function viewPayments(memberId){
 
@@ -1095,21 +1244,43 @@ function viewPayments(memberId){
 
 }
 
-function startNewDay(){
+async function startNewDay(){
 
   currentEqubDay++;
 
   if(currentEqubDay > 41){
-
     currentEqubDay = 1;
-
   }
 
-  members.forEach((member) => {
+  const snapshot = await getDocs(
+    collection(db, "members")
+  );
 
+  members.forEach((member) => {
     member.debt =
-      (member.debt || 0) +
-      parseInt(member.amount);
+      Number(member.debt || 0) +
+      Number(member.amount);
+  });
+
+  snapshot.forEach(async (firebaseDoc) => {
+
+    const data = firebaseDoc.data();
+
+    const localMember =
+      members.find(
+        m => String(m.id) === String(data.id)
+      );
+
+    if(localMember){
+
+      await updateDoc(
+        doc(db, "members", firebaseDoc.id),
+        {
+          debt: localMember.debt
+        }
+      );
+
+    }
 
   });
 
@@ -1117,9 +1288,7 @@ function startNewDay(){
 
   loadApp();
 
-  alert(
-    "New Equb Day Started"
-  );
+  alert("New Equb Day Started");
 
 }
 
@@ -1159,12 +1328,7 @@ function showReceipts(){
 
 }
 
-function showProfile(){
-  window.scrollTo({
-    top:0,
-    behavior:"smooth"
-  });
-}
+
 
 function setActiveMenu(button){
 
@@ -1177,14 +1341,28 @@ function setActiveMenu(button){
   button.classList.add("active");
 
 }
+window.setActiveMenu = setActiveMenu;
 
 function showProfile(){
 
-  // existing code
+  window.scrollTo({
+    top:0,
+    behavior:"smooth"
+  });
 
   document
-    .querySelectorAll(".bottom-menu button")
-    [3]
+    .querySelectorAll(".bottom-menu button")[3]
     .classList.add("active");
 
 }
+
+
+window.addMember = addMember;
+window.showSection = showSection;
+window.startNewDay = startNewDay;
+window.quickPay = quickPay;
+window.viewPayments = viewPayments;
+window.showHome = showHome;
+window.showPayments = showPayments;
+window.showReceipts = showReceipts;
+window.showProfile = showProfile;
