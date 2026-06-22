@@ -1,11 +1,26 @@
+async function loadEqubDay(){
 
+  const dayDoc =
+    await getDoc(
+      doc(db, "settings", "equb")
+    );
 
+  if(dayDoc.exists()){
+
+    currentEqubDay =
+      dayDoc.data().currentEqubDay || 0;
+
+  }
+
+}
+await loadEqubDay();
 import { db } from "./firebase.js";
 
 import {
   collection,
   addDoc,
   getDocs,
+  getDoc,
   doc,
   updateDoc
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
@@ -702,8 +717,7 @@ function showSection(section){
 }
 window.showSection = showSection;
 function showMemberInfo(member){
-  console.log("Logged Member:", member);
-  console.log("Member Image:", member.image);
+  
   
 
   document.getElementById("memberName")
@@ -876,6 +890,7 @@ receipts.forEach((receipt) => {
   }
 
 });
+}
 window.showMemberInfo = showMemberInfo;
 
 
@@ -915,8 +930,6 @@ function downloadPDF(){
 window.onload = function(){
 
   loadApp();
-
-}
 }
 
 
@@ -1248,10 +1261,16 @@ async function startNewDay(){
 
   currentEqubDay++;
 
-  if(currentEqubDay > 41){
-    currentEqubDay = 1;
-  }
 
+  if(currentEqubDay > 41){
+    currentEqubDay = 0;
+  }
+await updateDoc(
+  doc(db, "settings", "equb"),
+  {
+    currentEqubDay: currentEqubDay
+  }
+);
   const snapshot = await getDocs(
     collection(db, "members")
   );
@@ -1291,7 +1310,13 @@ async function startNewDay(){
   alert("New Equb Day Started");
 
 }
+window.onload = async function(){
 
+  await loadEqubDay();
+
+  loadApp();
+
+}
 function showHome(){
 
   const card =
