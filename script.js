@@ -1,29 +1,4 @@
-async function loadEqubDay(){
 
-  const dayDoc =
-    await getDoc(
-      doc(db, "settings", "equb")
-    );
-
-  if(dayDoc.exists()){
-
-    currentEqubDay =
-      dayDoc.data().currentEqubDay || 0;
-
-  }
-
-}
-await loadEqubDay();
-import { db } from "./firebase.js";
-
-import {
-  collection,
-  addDoc,
-  getDocs,
-  getDoc,
-  doc,
-  updateDoc
-} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 let payments =
   JSON.parse(
     localStorage.getItem("payments")
@@ -51,6 +26,63 @@ let receipts =
 
 let notifications =
   JSON.parse(localStorage.getItem("notifications")) || [];
+
+async function loadMembersFromFirebase(){
+
+  const snapshot = await getDocs(
+    collection(db, "members")
+  );
+
+  members = [];
+
+  snapshot.forEach((firebaseDoc) => {
+
+    members.push({
+      ...firebaseDoc.data(),
+      docId: firebaseDoc.id
+    });
+
+  });
+
+}
+window.onload = async function(){
+
+  await loadMembersFromFirebase();
+
+  await loadEqubDay();
+
+  loadApp();
+
+}
+
+async function loadEqubDay(){
+
+  const dayDoc =
+    await getDoc(
+      doc(db, "settings", "equb")
+    );
+
+  if(dayDoc.exists()){
+
+    currentEqubDay =
+      dayDoc.data().currentEqubDay || 0;
+
+  }
+
+}
+await loadEqubDay();
+import { db } from "./firebase.js";
+
+import {
+  collection,
+  addDoc,
+  getDocs,
+  getDoc,
+  doc,
+  updateDoc,
+  setDoc
+} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
 
  
 function saveData(){
@@ -1257,20 +1289,21 @@ function viewPayments(memberId){
 
 }
 
-async function startNewDay(){
+async function startNewDay() {
 
   currentEqubDay++;
 
-
-  if(currentEqubDay > 41){
+  if (currentEqubDay > 41) {
     currentEqubDay = 0;
   }
-await updateDoc(
-  doc(db, "settings", "equb"),
-  {
-    currentEqubDay: currentEqubDay
-  }
-);
+
+  await setDoc(
+    doc(db, "settings", "equb"),
+    {
+      currentEqubDay: currentEqubDay
+    }
+  );
+
   const snapshot = await getDocs(
     collection(db, "members")
   );
@@ -1281,7 +1314,7 @@ await updateDoc(
       Number(member.amount);
   });
 
-  snapshot.forEach(async (firebaseDoc) => {
+  for (const firebaseDoc of snapshot.docs) {
 
     const data = firebaseDoc.data();
 
@@ -1290,7 +1323,7 @@ await updateDoc(
         m => String(m.id) === String(data.id)
       );
 
-    if(localMember){
+    if (localMember) {
 
       await updateDoc(
         doc(db, "members", firebaseDoc.id),
@@ -1301,7 +1334,7 @@ await updateDoc(
 
     }
 
-  });
+  }
 
   saveData();
 
@@ -1310,13 +1343,14 @@ await updateDoc(
   alert("New Equb Day Started");
 
 }
-window.onload = async function(){
+window.onload = async function() {
 
   await loadEqubDay();
 
   loadApp();
 
-}
+};
+
 function showHome(){
 
   const card =
