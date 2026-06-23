@@ -83,6 +83,30 @@ import {
   setDoc
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
+async function loadReceiptsFromFirebase(){
+
+  receipts = [];
+
+  const snapshot =
+    await getDocs(
+      collection(db, "receipts")
+    );
+
+  snapshot.forEach((doc) => {
+    receipts.push(doc.data());
+  });
+
+}
+window.onload = async function(){
+
+  await loadMembersFromFirebase();
+
+  await loadReceiptsFromFirebase();
+
+
+  loadApp();
+
+}
 
  
 function saveData(){
@@ -344,8 +368,12 @@ else{
   date: new Date().toLocaleDateString()
   };
 
-  receipts.push(receipt);
+receipts.push(receipt);
 
+await addDoc(
+  collection(db, "receipts"),
+  receipt
+);
 
 notifications.push(
   `${name}: Status is ${status}. Amount: ${amount} ETB`
@@ -447,7 +475,7 @@ if(
   overdue = true;
 }
 
-    totalMoney += parseInt(member.amount);
+   totalMoney += Number(member.amount || 0); 
 
 
     const row =
@@ -777,8 +805,10 @@ document.getElementById(
   "receiptCount"
 ).innerText =
   receipts.filter(
-    r => r.member === member.name
-  ).length;
+  r =>
+    r.member.toLowerCase() ===
+    member.name.toLowerCase()
+).length
 
 document.getElementById(
   "accountStatus"
@@ -1193,10 +1223,6 @@ let firebaseDocId = null;
 
 snapshot.forEach((doc) => {
   const data = doc.data();
-
- console.log("Local:", qMember.id);
-  console.log("Firebase:", data.id);
-  console.log("Match:", data.id === qMember.id); 
   
 
   if(data.id === qMember.id){
@@ -1233,7 +1259,7 @@ checkSnap.forEach((d) => {
 }
 
   
-  receipts.push({
+  const receipt = {
 
   id: Date.now(),
 
@@ -1245,11 +1271,16 @@ checkSnap.forEach((d) => {
 
   date: new Date().toLocaleDateString()
 
-});
-  
-  
-  saveData();
+};
 
+receipts.push(receipt);
+
+await addDoc(
+  collection(db, "receipts"),
+  receipt
+);
+
+saveData();
   loadApp();
 
   alert("Payment Recorded");
