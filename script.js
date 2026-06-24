@@ -49,6 +49,9 @@ window.onload = async function(){
 
   await loadMembersFromFirebase();
 
+  await loadReceiptsFromFirebase();
+    
+
   await loadEqubDay();
 
   loadApp();
