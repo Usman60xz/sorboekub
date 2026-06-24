@@ -99,8 +99,6 @@ async function loadReceiptsFromFirebase(){
 }
 window.onload = async function(){
 
-  await loadMembersFromFirebase();
-
   await loadReceiptsFromFirebase();
 
 
