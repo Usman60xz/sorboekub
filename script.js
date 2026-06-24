@@ -151,10 +151,17 @@ async function login(){
 
 
   // ADMIN LOGIN
+  if(role === "admin"){
+
+  const adminDoc = await getDoc(
+    doc(db, "settings", "admin")
+  );
+
+  const adminData = adminDoc.data();
+
   if(
-    username === "admin" &&
-    password === "1234" &&
-    role === "admin"
+    username === adminData.username &&
+    password === adminData.password
   ){
 
     document.getElementById("loginPage")
@@ -170,7 +177,13 @@ async function login(){
 
     showSection("dashboard");
 
+  }else{
+
+    alert("Wrong Admin Login");
+
   }
+
+}
 
 
   // MEMBER LOGIN
