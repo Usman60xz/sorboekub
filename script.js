@@ -529,6 +529,10 @@ row.innerHTML = `
   <button onclick="editImage(${realIndex})">
     Image
   </button>
+  
+  <button onclick="editDebt(${realIndex})">
+    Debt
+  </button>
 
   <button onclick="deleteMember(${realIndex})">
     Delete
@@ -1460,6 +1464,39 @@ function showProfile(){
 
 }
 
+async function editDebt(index){
+
+  const member = members[index];
+
+  const newDebt = prompt(
+    `Enter new debt for ${member.name}`,
+    member.debt || 0
+  );
+
+  if(newDebt === null) return;
+
+  member.debt = Number(newDebt);
+
+  if(member.docId){
+
+    await updateDoc(
+      doc(db, "members", member.docId),
+      {
+        debt: member.debt
+      }
+    );
+
+  }
+
+  saveData();
+
+  loadApp();
+
+  alert("Debt updated successfully");
+
+}
+
+window.editDebt = editDebt;
 
 window.addMember = addMember;
 window.showSection = showSection;
