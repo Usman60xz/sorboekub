@@ -27,6 +27,9 @@ let receipts =
 let notifications =
   JSON.parse(localStorage.getItem("notifications")) || [];
 
+  let editingMemberIndex = null;
+  let editingPasswordIndex = null;
+
 async function loadMembersFromFirebase(){
 
   const snapshot = await getDocs(
@@ -83,7 +86,8 @@ import {
   getDoc,
   doc,
   updateDoc,
-  setDoc
+  setDoc,
+  deleteDoc
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
 async function loadReceiptsFromFirebase(){
@@ -96,7 +100,13 @@ async function loadReceiptsFromFirebase(){
     );
 
   snapshot.forEach((doc) => {
-    receipts.push(doc.data());
+    const receipt = doc.data();
+
+if (receipt.equbDay === undefined) {
+  receipt.equbDay = 0;
+}
+
+receipts.push(receipt);
   });
 
 }
@@ -227,6 +237,9 @@ if (
     document.getElementById("memberDashboard")
       .style.display = "block";
 
+    document.getElementById("memberReceiptSection")
+      .style.display = "none";
+      
     showMemberInfo(member);
 
   }else{
@@ -379,7 +392,8 @@ else{
   member: name,
   amount: amount,
   status: status,
-  date: new Date().toLocaleDateString()
+  date: new Date().toLocaleDateString(),
+  equbDay: currentEqubDay
   };
 
 receipts.push(receipt);
@@ -522,9 +536,13 @@ row.innerHTML = `
   History
 </button>
 </button>
-  <button onclick="editMember(${realIndex})">
-    Edit
-  </button>
+  <button onclick="editMemberProfile(${realIndex})">
+  Profile
+</button>
+
+<button onclick="changeMemberPassword(${realIndex})">
+  Password
+</button>
 
   <button onclick="editImage(${realIndex})">
     Image
@@ -533,6 +551,8 @@ row.innerHTML = `
   <button onclick="editDebt(${realIndex})">
     Debt
   </button>
+
+  
 
   <button onclick="deleteMember(${realIndex})">
     Delete
@@ -656,35 +676,6 @@ if(groupStats){
 window.loadApp = loadApp;
 
 
-function editMember(index){
-
-  const newName =
-    prompt(
-      members[index].name
-    );
-
-  const newAmount =
-    prompt(
-      "Edit amount",
-      members[index].amount
-    );
-
-
-  if(newName && newAmount){
-
-    members[index].name = newName;
-
-    members[index].amount = newAmount;
-
-    saveData();
-
-    loadApp();
-
-  }
-
-}
-window.editMember = editMember;
-
 function deleteMember(index){
 
   members.splice(index,1);
@@ -775,9 +766,12 @@ function showSection(section){
   const members =
     document.getElementById("membersSection");
 
+  const receipts =
+  document.getElementById("receiptsPage");
 
   dashboard.style.display = "none";
   members.style.display = "none";
+  receipts.style.display = "none";
 
 
   if(section === "dashboard"){
@@ -791,6 +785,14 @@ function showSection(section){
     members.style.display = "block";
 
   }
+
+  if(section === "receiptsPage"){
+
+  receipts.style.display = "block";
+
+  loadReceiptsPage();
+
+}
 
 }
 window.showSection = showSection;
@@ -933,41 +935,50 @@ if((member.debt || 0) === 0){
     document.getElementById("memberReceiptList");
 
   memberReceiptList.innerHTML = "";
-receipts.forEach((receipt) => {
 
-  if(receipt.member === member.name){
+// Member receipts only
+const memberReceipts = receipts.filter(
+  receipt =>
+    receipt.member.toLowerCase() ===
+    member.name.toLowerCase()
+);
 
-    const li =
-      document.createElement("li");
+// Newest first
+memberReceipts.reverse();
 
-    li.innerHTML = `
-      <div class="receipt-card">
+// Show only latest 10
+const lastTenReceipts = memberReceipts.slice(0, 10);
 
-        <h4>
-          🧾 Receipt #${receipt.id}
-        </h4>
+lastTenReceipts.forEach((receipt) => {
 
-        <p>
-          💰 Amount:
-          ${receipt.amount} ETB
-        </p>
+  const li = document.createElement("li");
 
-        <p>
-          ✅ Status:
-          ${receipt.status}
-        </p>
+  li.innerHTML = `
+    <div class="receipt-card">
 
-        <p>
-          📅 Date:
-          ${receipt.date}
-        </p>
+      <h4>
+        🧾 Receipt #${receipt.id}
+      </h4>
 
-      </div>
-    `;
+      <p>
+        💰 Amount:
+        ${receipt.amount} ETB
+      </p>
 
-    memberReceiptList.appendChild(li);
+      <p>
+        ✅ Status:
+        ${receipt.status}
+      </p>
 
-  }
+      <p>
+        📅 Date:
+        ${receipt.date}
+      </p>
+
+    </div>
+  `;
+
+  memberReceiptList.appendChild(li);
 
 });
 }
@@ -1011,6 +1022,8 @@ window.onload = function(){
 
   loadApp();
 }
+
+
 
 
 async function changeProfilePicture(){
@@ -1287,8 +1300,8 @@ checkSnap.forEach((d) => {
 
   status: "Paid",
 
-  date: new Date().toLocaleDateString()
-
+  date: new Date().toLocaleDateString(),
+  equbDay: currentEqubDay
 };
 
 receipts.push(receipt);
@@ -1402,8 +1415,11 @@ window.onload = async function() {
 
 function showHome(){
 
-  const card =
-    document.getElementById("equbDayCard");
+  // Hide receipt page
+  document.getElementById("memberReceiptSection").style.display = "none";
+
+  // Go back to dashboard
+  const card = document.getElementById("equbDayCard");
 
   if(card){
     card.scrollIntoView({
@@ -1413,6 +1429,8 @@ function showHome(){
   }
 
 }
+
+window.showHome = showHome;
 
 function showPayments(){
   document
@@ -1424,20 +1442,19 @@ function showPayments(){
 
 function showReceipts(){
 
-  const receiptTitle =
-    document.querySelector(
-      "#memberReceiptList"
-    );
+  const receiptSection =
+    document.getElementById("memberReceiptSection");
 
-  receiptTitle.scrollIntoView({
-    behavior:"smooth",
-    block:"start"
+  receiptSection.style.display = "block";
+
+  receiptSection.scrollIntoView({
+    behavior: "smooth",
+    block: "start"
   });
 
 }
 
-
-
+window.showReceipts = showReceipts;
 function setActiveMenu(button){
 
   document
@@ -1452,17 +1469,31 @@ function setActiveMenu(button){
 window.setActiveMenu = setActiveMenu;
 
 function showProfile(){
+window.scrollTo({
 
-  window.scrollTo({
     top:0,
+
     behavior:"smooth"
+
   });
 
-  document
-    .querySelectorAll(".bottom-menu button")[3]
-    .classList.add("active");
+  // Hide receipts
+  document.getElementById("memberReceiptSection").style.display = "none";
+
+  // Profile section
+  const profile =
+    document.getElementById("memberProfile");
+
+  if(profile){
+    profile.scrollIntoView({
+      behavior:"smooth",
+      block:"start"
+    });
+  }
 
 }
+
+window.showProfile = showProfile;
 
 async function editDebt(index){
 
@@ -1495,8 +1526,212 @@ async function editDebt(index){
   alert("Debt updated successfully");
 
 }
-
 window.editDebt = editDebt;
+
+
+function editMemberProfile(index){
+
+  editingMemberIndex = index;
+
+  const member = members[index];
+
+  document.getElementById(
+    "editName"
+  ).value = member.name;
+
+  document.getElementById(
+    "editPhone"
+  ).value = member.phone;
+
+  document.getElementById(
+    "editAmount"
+  ).value = member.amount;
+
+  document.getElementById(
+    "editStatus"
+  ).value = member.status;
+
+  document.getElementById(
+    "editMemberModal"
+  ).style.display = "flex";
+
+}
+
+async function saveMemberEdit(){
+
+  const member =
+    members[editingMemberIndex];
+
+  member.name =
+    document.getElementById(
+      "editName"
+    ).value;
+
+  member.phone =
+    document.getElementById(
+      "editPhone"
+    ).value;
+
+  member.amount =
+    document.getElementById(
+      "editAmount"
+    ).value;
+
+  member.status =
+    document.getElementById(
+      "editStatus"
+    ).value;
+
+  await updateDoc(
+    doc(
+      db,
+      "members",
+      member.docId
+    ),
+    {
+      name: member.name,
+      phone: member.phone,
+      amount: member.amount,
+      status: member.status
+    }
+  );
+
+  saveData();
+
+  loadApp();
+
+  closeEditModal();
+
+  alert("Member Updated");
+
+}
+
+function closeEditModal(){
+
+  document.getElementById(
+    "editMemberModal"
+  ).style.display = "none";
+
+}
+
+window.editMemberProfile =
+  editMemberProfile;
+
+window.saveMemberEdit =
+  saveMemberEdit;
+
+window.closeEditModal =
+  closeEditModal;
+
+function changeMemberPassword(index){
+
+  editingPasswordIndex = index;
+
+  document.getElementById("newPassword").value = "";
+
+  document.getElementById("passwordModal").style.display = "flex";
+
+}
+
+function closePasswordModal(){
+
+  document.getElementById("passwordModal").style.display = "none";
+
+}
+
+async function saveNewPassword(){
+
+  const newPassword =
+    document.getElementById("newPassword").value.trim();
+
+  if(newPassword === ""){
+
+    alert("Enter a password");
+    return;
+
+  }
+
+  members[editingPasswordIndex].password = newPassword;
+
+  await updateDoc(
+
+    doc(db, "members", members[editingPasswordIndex].docId),
+
+    {
+      password: newPassword
+    }
+
+  );
+
+  closePasswordModal();
+
+  alert("Password updated successfully.");
+
+}
+
+function loadReceiptsPage() {
+
+  const table =
+    document.getElementById("receiptTable");
+
+  table.innerHTML = "";
+
+  receipts.forEach((receipt, index) => {
+
+
+    table.innerHTML += `
+      <tr>
+        <td>${receipt.id}</td>
+        <td>${receipt.member}</td>
+        <td>${receipt.amount} ETB</td>
+        <td>${receipt.date}</td>
+        <td>
+          <button onclick="deleteReceipt(${index})">
+            Delete
+          </button>
+        </td>
+      </tr>
+    `;
+
+  });
+
+}
+
+async function deleteReceipt(index){
+
+  if(!confirm("Delete this receipt?")) return;
+
+  const receipt = receipts[index];
+
+  // Firestore receipt find
+  const snapshot = await getDocs(
+    collection(db, "receipts")
+  );
+
+  snapshot.forEach(async (firebaseDoc)=>{
+
+    const data = firebaseDoc.data();
+
+    if(
+      data.id == receipt.id
+    ){
+
+      await deleteDoc(
+        doc(db,"receipts",firebaseDoc.id)
+      );
+
+    }
+
+  });
+
+  await loadReceiptsFromFirebase();
+
+  loadReceiptsPage();
+
+}
+window.deleteReceipt = deleteReceipt;
+
+
 
 window.addMember = addMember;
 window.showSection = showSection;
@@ -1507,3 +1742,6 @@ window.showHome = showHome;
 window.showPayments = showPayments;
 window.showReceipts = showReceipts;
 window.showProfile = showProfile;
+window.changeMemberPassword = changeMemberPassword;
+window.saveNewPassword = saveNewPassword;
+window.closePasswordModal = closePasswordModal;

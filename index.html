@@ -156,9 +156,13 @@
 </div>
 
     
-    <h3>My Receipts</h3>
+  <div id="memberReceiptSection" style="display:none;">
 
-    <ul id="memberReceiptList"></ul>
+  <h2>📄 My Receipts</h2>
+
+  <ul id="memberReceiptList"></ul>
+
+</div>
 
    <div class="bottom-menu">
 
@@ -182,11 +186,17 @@
     <button onclick="logout()"
     style="margin-bottom:120px;"
     >
-      Logout
+      logout
     </button>
 
   </div>
+ <div id="memberReceiptSection" style="display:none;">
 
+  <h2>📄 My Receipts</h2>
+
+  <ul id="memberReceiptList"></ul>
+
+</div>
 
   <!-- ADMIN APP -->
 
@@ -206,8 +216,12 @@
         Members
       </button>
 
+      <button onclick="showSection('receiptsPage')">
+      🧾 Receipts
+      </button>
+
       <button onclick="logout()">
-        Logout
+        logout
       </button>
 
     </div>
@@ -228,6 +242,8 @@
           </span>
         </h2>
 
+
+
         <h2>
           Total Money:
           <span id="totalMoney">
@@ -241,7 +257,35 @@
         <div id="groupStats"></div>
 
       </div>
+<div id="receiptsPage" style="display:none;">
 
+  <h2>🧾 Receipt Management</h2>
+
+  <input
+    type="text"
+    id="receiptSearch"
+    placeholder="Search receipt..."
+    onkeyup="loadReceiptsPage()"
+  >
+
+  <table class="member-table">
+
+    <thead>
+      <tr>
+        <th>Receipt</th>
+        <th>Member</th>
+        <th>Amount</th>
+        <th>Date</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+
+    <tbody id="receiptTable">
+    </tbody>
+
+  </table>
+
+</div>
 
     <div
   id="membersSection"
@@ -460,6 +504,79 @@
   >
 
     
+
+</div>
+</div>
+<div id="editMemberModal" class="modal">
+
+  <div class="modal-content">
+
+    <h2>✏️ Edit Member</h2>
+
+    <input
+      type="text"
+      id="editName"
+      placeholder="Name"
+    >
+
+    <input
+      type="text"
+      id="editPhone"
+      placeholder="Phone"
+    >
+
+    <input
+      type="number"
+      id="editAmount"
+      placeholder="Amount"
+    >
+
+    <select id="editStatus">
+      <option>Active</option>
+      <option>Pending</option>
+      <option>Unpaid</option>
+    </select>
+
+    <div class="modal-buttons">
+
+      <button onclick="saveMemberEdit()">
+        Save
+      </button>
+
+      <button onclick="closeEditModal()">
+        Cancel
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+<div id="passwordModal" class="modal">
+
+  <div class="modal-content">
+
+    <h2>🔑 Change Password</h2>
+
+    <input
+      type="password"
+      id="newPassword"
+      placeholder="New Password"
+    >
+
+    <div class="modal-buttons">
+
+      <button onclick="saveNewPassword()">
+        Save
+      </button>
+
+      <button onclick="closePasswordModal()">
+        Cancel
+      </button>
+
+    </div>
+
+  </div>
 
 </div>
 
