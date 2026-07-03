@@ -29,7 +29,7 @@
       <input
         type="text"
         id="username"
-        placeholder="Username"
+        placeholder="Phone Number"
       >
 
       <input
@@ -54,10 +54,61 @@
         Login
       </button>
 
+      <button onclick="forgotPassword()">
+🔑 Forgot Password
+</button>
+
+
     </div>
-
+<button onclick="showSignup()">
+Create New Account
+</button>   
   </div>
+<div id="signupSection" style="display:none;">
 
+  <h2>Create Account</h2>
+
+  <input
+    type="text"
+    id="signupName"
+    placeholder="Full Name">
+
+    <input
+  type="email"
+  id="signupEmail"
+  placeholder="Email Address">
+
+  <input
+    type="text"
+    id="signupPhone"
+    placeholder="Phone Number">
+
+  <input
+    type="text"
+    id="signupAddress"
+    placeholder="Address">
+
+  <select id="signupEqubType">
+    <option value="1000">1000 ETB</option>
+    <option value="5000">5000 ETB</option>
+    <option value="10000">10000 ETB</option>
+  </select>
+
+  <input
+    type="password"
+    id="signupPassword"
+    placeholder="Password">
+
+  <input
+    type="password"
+    id="signupConfirmPassword"
+    placeholder="Confirm Password">
+
+  <button onclick="signupMember()">
+    Create Account
+  </button>
+
+</div>
 
   <!-- MEMBER DASHBOARD -->
 
@@ -220,6 +271,10 @@
       🧾 Receipts
       </button>
 
+      <button onclick="showPendingMembers()">
+    ⏳ Pending Members
+      </button> 
+
       <button onclick="logout()">
         logout
       </button>
@@ -257,6 +312,15 @@
         <div id="groupStats"></div>
 
       </div>
+
+<div id="pendingMembersPage" style="display:none;">
+
+    <h2>Pending Member Requests</h2>
+
+    <div id="pendingMembersList"></div>
+
+</div>
+
 <div id="receiptsPage" style="display:none;">
 
   <h2>🧾 Receipt Management</h2>
@@ -286,6 +350,8 @@
   </table>
 
 </div>
+
+
 
     <div
   id="membersSection"
@@ -379,13 +445,7 @@
 
   
 </div>
-    <div class="card">
-
-  <h2>Receipts</h2>
-
-  <ul id="receiptList"></ul>
-
-</div>
+    
 
   </div>
 
@@ -552,33 +612,12 @@
   </div>
 
 </div>
-<div id="passwordModal" class="modal">
-
-  <div class="modal-content">
-
-    <h2>🔑 Change Password</h2>
-
-    <input
-      type="password"
-      id="newPassword"
-      placeholder="New Password"
-    >
-
-    <div class="modal-buttons">
-
-      <button onclick="saveNewPassword()">
-        Save
-      </button>
-
-      <button onclick="closePasswordModal()">
-        Cancel
-      </button>
-
-    </div>
 
   </div>
 
 </div>
+
+
 
   <script type="module" src="firebase.js"></script>
   <script type="module" src="script.js"></script>

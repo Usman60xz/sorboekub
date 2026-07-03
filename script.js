@@ -30,6 +30,9 @@ let notifications =
   let editingMemberIndex = null;
   let editingPasswordIndex = null;
 
+
+
+
 async function loadMembersFromFirebase(){
 
   const snapshot = await getDocs(
@@ -76,8 +79,7 @@ async function loadEqubDay(){
   }
 
 }
-await loadEqubDay();
-import { db } from "./firebase.js";
+import { auth, db } from "./firebase.js";
 
 import {
   collection,
@@ -89,6 +91,18 @@ import {
   setDoc,
   deleteDoc
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+import {
+  createUserWithEmailAndPassword
+} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+
+import {
+  signInWithEmailAndPassword
+} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+
+import {
+  sendPasswordResetEmail
+} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 
 async function loadReceiptsFromFirebase(){
 
@@ -200,59 +214,126 @@ async function login(){
 
 
   // MEMBER LOGIN
- else if(role === "member"){
+ // MEMBER LOGIN
+else if(role === "member"){
 
-  const snapshot =
-  await getDocs(
-    collection(db, "members")
-  );
+    try{
 
-let member = null;
+        const snapshot = await getDocs(collection(db,"members"));
 
-snapshot.forEach((doc) => {
+        let member = null;
 
-  const data = doc.data();
-  const memberName =
-  (data.name || "").toLowerCase();
+        snapshot.forEach((docSnap)=>{
 
-if (
-  memberName ===
-    username.toLowerCase() &&
-  data.password === password
-) member = {
-  ...data,
-  docId: doc.id
-};
+            const data = docSnap.data();
 
+            if(data.phone === username){
 
-});
-  if(member){
+                member = {
+                    ...data,
+                    docId: docSnap.id
+                };
 
-    document.getElementById("loginPage")
-      .style.display = "none";
+            }
 
-    document.getElementById("app")
-      .style.display = "none";
+        });
 
-    document.getElementById("memberDashboard")
-      .style.display = "block";
+        if(!member){
 
-    document.getElementById("memberReceiptSection")
-      .style.display = "none";
-      
-    showMemberInfo(member);
+            alert("Your account is waiting for Admin approval.");
+            return;
 
-  }else{
+        }
 
-    alert(
-      "Wrong username or password"
-    );
+        await signInWithEmailAndPassword(
+            auth,
+            member.email,
+            password
+        );
 
-  }
+        document.getElementById("loginPage").style.display = "none";
+        document.getElementById("app").style.display = "none";
+        document.getElementById("memberDashboard").style.display = "block";
+        document.getElementById("memberReceiptSection").style.display = "none";
+
+        showMemberInfo(member);
+
+    }catch(error){
+
+        console.log(error.code);
+        console.log(error.message);
+
+        alert("Wrong phone number or password.");
+
+    }
 
 }
 }
 window.login = login;
+
+function showSignup(){
+
+  document.getElementById("loginPage").style.display = "none";
+
+  document.getElementById("signupSection").style.display = "block";
+
+}
+
+window.showSignup = showSignup;
+
+async function signupMember(){
+
+  const name = document.getElementById("signupName").value;
+  const phone = document.getElementById("signupPhone").value;
+  const address = document.getElementById("signupAddress").value;
+  const equb = document.getElementById("signupEqubType").value;
+  const password = document.getElementById("signupPassword").value;
+  const confirm = document.getElementById("signupConfirmPassword").value;
+
+  if(password !== confirm){
+    alert("Passwords do not match");
+    return;
+  }
+
+  const email =
+document.getElementById("signupEmail").value.trim();
+  try{
+
+    const userCredential =
+      await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+
+    await addDoc(
+  collection(db, "pendingMembers"),
+  {
+    uid: userCredential.user.uid,
+    email: email,
+    name: name,
+    phone: phone,
+    address: address,
+    amount: Number(equb),
+    password: password,
+    status: "Pending",
+    image: "https://via.placeholder.com/60",
+    createdAt: new Date()
+  }
+);
+
+alert("Registration submitted. Please wait for Admin approval.");  
+
+    alert("Account created successfully");
+
+  }catch(error){
+
+    alert(error.message);
+
+  }
+
+}
+window.signupMember = signupMember;
 
 function logout(){
 
@@ -419,7 +500,9 @@ notifications.push(
 }
 
 
-function loadApp(){
+async function loadApp(){
+
+  await loadMembersFromFirebase();
 
   const receiptList =
   document.getElementById("receiptList");
@@ -528,11 +611,12 @@ row.innerHTML = `
 
 <td>${member.status}</td>
 
+<td>
   <button onclick="quickPay(${realIndex})">
   Pay
 </button>
 
-<button onclick="viewPayments(${member.id})">
+<button onclick="viewPayments('${member.docId}')">
   History
 </button>
 </button>
@@ -540,9 +624,7 @@ row.innerHTML = `
   Profile
 </button>
 
-<button onclick="changeMemberPassword(${realIndex})">
-  Password
-</button>
+
 
   <button onclick="editImage(${realIndex})">
     Image
@@ -676,15 +758,26 @@ if(groupStats){
 window.loadApp = loadApp;
 
 
-function deleteMember(index){
+async function deleteMember(index){
 
-  members.splice(index,1);
+  if(!confirm("Delete this member?")){
+    return;
+  }
 
-  saveData();
+  const member = members[index];
+
+  await deleteDoc(
+    doc(db, "members", member.docId)
+  );
+
+  await loadMembersFromFirebase();
 
   loadApp();
 
+  alert("Member deleted successfully");
+
 }
+
 window.deleteMember = deleteMember;
 
 function updateStats(){
@@ -760,45 +853,40 @@ window.searchMember = searchMember;
 
 function showSection(section){
 
-  const dashboard =
-    document.getElementById("dashboardSection");
+   document.getElementById("dashboardSection").style.display = "none";
+  document.getElementById("membersSection").style.display = "none";
+  document.getElementById("receiptsPage").style.display = "none";
+  document.getElementById("pendingMembersPage").style.display = "none";
 
-  const members =
-    document.getElementById("membersSection");
-
-  const receipts =
-  document.getElementById("receiptsPage");
-
-  dashboard.style.display = "none";
-  members.style.display = "none";
-  receipts.style.display = "none";
-
+  
 
   if(section === "dashboard"){
-
-    dashboard.style.display = "block";
-
+    document.getElementById("dashboardSection").style.display = "block";
   }
 
   if(section === "members"){
-
-    members.style.display = "block";
-
+    document.getElementById("membersSection").style.display = "block";
   }
 
   if(section === "receiptsPage"){
-
-  receipts.style.display = "block";
-
-  loadReceiptsPage();
-
+    document.getElementById("receiptsPage").style.display = "block";
+    loadReceiptsPage();
 }
 
 }
 window.showSection = showSection;
-function showMemberInfo(member){
+async function showMemberInfo(member){
   
-  
+  const memberDoc = await getDoc(
+  doc(db, "members", member.docId)
+);
+
+if (memberDoc.exists()) {
+  member = {
+    ...memberDoc.data(),
+    docId: member.docId
+  };
+}
 
   document.getElementById("memberName")
     .innerText =
@@ -1101,29 +1189,35 @@ async function changeProfilePicture(){
 
 window.changeProfilePicture = changeProfilePicture;
 
-function editImage(index){
+async function editImage(index){
 
-  const input =
-    document.createElement("input");
+  const input = document.createElement("input");
 
   input.type = "file";
-
   input.accept = "image/*";
 
-  input.onchange = function(){
+  input.onchange = async function(){
 
-    const file =
-      input.files[0];
+    const file = input.files[0];
 
-    const reader =
-      new FileReader();
+    if(!file) return;
 
-    reader.onload = function(e){
+    const reader = new FileReader();
 
-      members[index].image =
-        e.target.result;
+    reader.onload = async function(e){
 
-      saveData();
+      const imageData = e.target.result;
+
+      members[index].image = imageData;
+
+      await updateDoc(
+        doc(db, "members", members[index].docId),
+        {
+          image: imageData
+        }
+      );
+
+      await loadMembersFromFirebase();
 
       loadApp();
 
@@ -1138,6 +1232,7 @@ function editImage(index){
   input.click();
 
 }
+
 window.editImage = editImage;
 
 async function filterMembers(){
@@ -1233,52 +1328,57 @@ const member =
 }
 
   
-  member.payments.push({
 
-    amount: member.amount,
+ const receipt = {
+  id: Date.now(),
+  member: member.name,
+  memberId: member.docId,
+  amount: Number(member.amount),
+  status: "Paid",
+  month: month,
+  date: new Date().toLocaleDateString(),
+  equbDay: currentEqubDay
+}; 
 
-    month: month,
-
-    date:
-      new Date()
-      .toLocaleDateString()
-
-  });
-const qMember = members[index];
-
-const snapshot = await getDocs(
-  collection(db, "members")
-);
-
-let firebaseDocId = null;
-
-snapshot.forEach((doc) => {
-  const data = doc.data();
   
 
-  if(data.id === qMember.id){
-    firebaseDocId = doc.id;
-  }
-});
+const qMember = members[index];
 
-if(firebaseDocId){
- 
- 
-  member.debt =
-Math.max(
-  0,
-  Number(member.debt) -
-  Number(member.amount)
+const memberSnap = await getDoc(
+  doc(db, "members", qMember.docId)
 );
 
+const latestMember = memberSnap.data();
+
+member.payments = latestMember.payments || [];
+
+member.payments.push({
+    amount: member.amount,
+    month: month,
+    date: new Date().toLocaleDateString()
+});
+
+const firebaseDocId = qMember.docId;
+
+member.debt = Math.max(
+  0,
+  Number(member.debt || 0) -
+  Number(member.amount || 0)
+);
+
+member.status = member.debt === 0
+  ? "Paid"
+  : "Unpaid";
 
 await updateDoc(
   doc(db, "members", firebaseDocId),
   {
     debt: member.debt,
-    payments: member.payments
+    payments: member.payments,
+    status: member.status
   }
 );
+
 const checkSnap = await getDocs(
   collection(db, "members")
 );
@@ -1287,23 +1387,6 @@ checkSnap.forEach((d) => {
   
 });
 
-}
-
-  
-  const receipt = {
-
-  id: Date.now(),
-
-  member: member.name,
-
-  amount: member.amount,
-
-  status: "Paid",
-
-  date: new Date().toLocaleDateString(),
-  equbDay: currentEqubDay
-};
-
 receipts.push(receipt);
 
 await addDoc(
@@ -1311,7 +1394,8 @@ await addDoc(
   receipt
 );
 
-saveData();
+await loadReceiptsFromFirebase();
+await loadMembersFromFirebase();
   loadApp();
 
   alert("Payment Recorded");
@@ -1319,18 +1403,17 @@ saveData();
 }
 window.quickPay = quickPay;
 
-function viewPayments(memberId){
+function viewPayments(docId) {
 
-  const member =
-    members.find(
-      m => m.id === memberId
-    );
+  const member = members.find(
+    m => m.docId === docId
+  );
 
-  if(
+  if (
     !member ||
     !member.payments ||
     member.payments.length === 0
-  ){
+  ) {
     alert("No payments found");
     return;
   }
@@ -1348,7 +1431,6 @@ function viewPayments(memberId){
   });
 
   alert(message);
-
 }
 
 async function startNewDay() {
@@ -1370,35 +1452,26 @@ async function startNewDay() {
     collection(db, "members")
   );
 
-  members.forEach((member) => {
-    member.debt =
-      Number(member.debt || 0) +
-      Number(member.amount);
-  });
+  
 
-  for (const firebaseDoc of snapshot.docs) {
+  for (const member of members) {
 
-    const data = firebaseDoc.data();
+  member.debt =
+    Number(member.debt || 0) +
+    Number(member.amount || 0);
 
-    const localMember =
-      members.find(
-        m => String(m.id) === String(data.id)
-      );
-
-    if (localMember) {
-
-      await updateDoc(
-        doc(db, "members", firebaseDoc.id),
-        {
-          debt: localMember.debt
-        }
-      );
-
+  await updateDoc(
+    doc(db, "members", member.docId),
+    {
+      debt: member.debt
     }
+  );
 
-  }
+}
 
   saveData();
+
+  await loadMembersFromFirebase();
 
   loadApp();
 
@@ -1517,6 +1590,8 @@ async function editDebt(index){
       }
     );
 
+   
+
   }
 
   saveData();
@@ -1623,52 +1698,6 @@ window.saveMemberEdit =
 window.closeEditModal =
   closeEditModal;
 
-function changeMemberPassword(index){
-
-  editingPasswordIndex = index;
-
-  document.getElementById("newPassword").value = "";
-
-  document.getElementById("passwordModal").style.display = "flex";
-
-}
-
-function closePasswordModal(){
-
-  document.getElementById("passwordModal").style.display = "none";
-
-}
-
-async function saveNewPassword(){
-
-  const newPassword =
-    document.getElementById("newPassword").value.trim();
-
-  if(newPassword === ""){
-
-    alert("Enter a password");
-    return;
-
-  }
-
-  members[editingPasswordIndex].password = newPassword;
-
-  await updateDoc(
-
-    doc(db, "members", members[editingPasswordIndex].docId),
-
-    {
-      password: newPassword
-    }
-
-  );
-
-  closePasswordModal();
-
-  alert("Password updated successfully.");
-
-}
-
 function loadReceiptsPage() {
 
   const table =
@@ -1731,8 +1760,147 @@ async function deleteReceipt(index){
 }
 window.deleteReceipt = deleteReceipt;
 
+function showPendingMembers(){
+
+    document.getElementById("dashboardSection").style.display="none";
+    document.getElementById("membersSection").style.display="none";
+    document.getElementById("receiptsPage").style.display="none";
+
+    document.getElementById("pendingMembersPage").style.display="block";
+
+    loadPendingMembers();
+
+}
+window.showPendingMembers = showPendingMembers;
 
 
+async function loadPendingMembers(){
+
+    const container =
+    document.getElementById("pendingMembersList");
+
+    container.innerHTML="";
+
+    const snapshot = await getDocs(
+        collection(db,"pendingMembers")
+    );
+
+    snapshot.forEach((memberDoc)=>{
+
+        const member = memberDoc.data();
+
+        container.innerHTML += `
+
+        <div class="pending-card">
+
+            <h3>${member.name}</h3>
+
+            <p>📞 ${member.phone}</p>
+
+            <p>🏠 ${member.address}</p>
+
+            <p>💰 ${member.amount} ETB</p>
+
+            <button onclick="approveMember('${memberDoc.id}')">
+                ✅ Approve
+            </button>
+
+            <button onclick="rejectMember('${memberDoc.id}')">
+                ❌ Reject
+            </button>
+
+        </div>
+
+        `;
+
+    });
+
+}
+
+
+async function approveMember(id){
+
+    const pendingRef = doc(db, "pendingMembers", id);
+
+    const pendingSnap = await getDoc(pendingRef);
+
+    if(!pendingSnap.exists()) return;
+
+    const pendingMember = pendingSnap.data();
+
+    await setDoc(
+        doc(db, "members", id),
+        {
+            uid: pendingMember.uid,
+            email: pendingMember.email,
+            name: pendingMember.name,
+            phone: pendingMember.phone,
+            address: pendingMember.address,
+            amount: Number(pendingMember.amount || 0),
+            debt: Number(pendingMember.amount || 0),
+            image: pendingMember.image || "https://via.placeholder.com/60",
+            password: pendingMember.password,
+            
+            status: "Active",
+            payments: [],
+            createdAt: pendingMember.createdAt
+        }
+    );
+
+    await deleteDoc(pendingRef);
+
+    await loadPendingMembers();
+    await loadMembersFromFirebase();
+
+    loadApp();
+
+    alert("Member Approved");
+
+}
+
+window.approveMember = approveMember;
+
+async function rejectMember(id){
+
+    await deleteDoc(
+        doc(db,"pendingMembers",id)
+    );
+
+    alert("Member Rejected");
+
+    loadPendingMembers();
+
+}
+window.rejectMember = rejectMember;
+
+async function forgotPassword(){
+
+    const email =
+    prompt("Enter your email");
+
+    if(!email) return;
+
+    try{
+
+        await sendPasswordResetEmail(
+            auth,
+            email
+        );
+
+        alert("Password reset link sent.");
+
+    }catch(error){
+
+    console.log(error.code);
+    console.log(error.message);
+
+    alert(error.code);
+
+}
+    
+
+}
+window.forgotPassword = forgotPassword;
 window.addMember = addMember;
 window.showSection = showSection;
 window.startNewDay = startNewDay;
@@ -1742,6 +1910,3 @@ window.showHome = showHome;
 window.showPayments = showPayments;
 window.showReceipts = showReceipts;
 window.showProfile = showProfile;
-window.changeMemberPassword = changeMemberPassword;
-window.saveNewPassword = saveNewPassword;
-window.closePasswordModal = closePasswordModal;
