@@ -876,6 +876,7 @@ function showSection(section){
 }
 window.showSection = showSection;
 async function showMemberInfo(member){
+  window.currentMember = member;
   
   const memberDoc = await getDoc(
   doc(db, "members", member.docId)
@@ -1114,70 +1115,58 @@ window.onload = function(){
 
 
 
-async function changeProfilePicture(){
+async function changeProfilePicture() {
 
   const file =
-    document.getElementById(
-      "memberProfileInput"
-    ).files[0];
+    document.getElementById("memberProfileInput").files[0];
 
-  if(!file){
+  if (!file) {
     alert("Select image first");
     return;
   }
 
   const reader = new FileReader();
 
-  reader.onload = async function(e){
+  reader.onload = async function (e) {
 
-    const username =
-      document.getElementById(
-        "memberName"
-      ).innerText;
+    const member = window.currentMember;
 
-    const member =
-      members.find(
-        m => m.name === username
-      );
+    if (!member) {
+      alert("Member not found.");
+      return;
+    }
 
-    if(member){
+    const image = e.target.result;
 
-      member.image = e.target.result;
+    try {
 
-      const snapshot = await getDocs(
-        collection(db, "members")
-      );
-
-      let firebaseDocId = null;
-
-      snapshot.forEach((d) => {
-
-        const data = d.data();
-
-        if(data.id === member.id){
-          firebaseDocId = d.id;
+      await updateDoc(
+        doc(db, "members", member.docId),
+        {
+          image: image
         }
+      );
 
-      });
+      member.image = image;
 
-      if(firebaseDocId){
+      await loadMembersFromFirebase();
 
-        await updateDoc(
-          doc(db, "members", firebaseDocId),
-          {
-            image: member.image
-          }
+      const updatedMember =
+        members.find(
+          m => m.docId === member.docId
         );
 
-      }
-
-      saveData();
-
-      showMemberInfo(member);
+      showMemberInfo(updatedMember);
 
       loadApp();
 
-      alert("Profile updated");
+      alert("Profile picture updated successfully.");
+
+    } catch (error) {
+
+      console.error(error);
+
+      alert("Failed to update profile picture.");
 
     }
 
