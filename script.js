@@ -1880,15 +1880,13 @@ async function forgotPassword(){
 
     }catch(error){
 
-    console.log(error.code);
-    console.log(error.message);
-
-    alert(error.code);
-
+        console.log(error.code);
+        console.log(error.message);
+ 
+  }
+   
 }
-    
 
-}
 window.forgotPassword = forgotPassword;
 window.addMember = addMember;
 window.showSection = showSection;
