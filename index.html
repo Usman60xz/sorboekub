@@ -213,16 +213,21 @@ Create New Account
 
 </div>
 
-    
-  <div id="memberReceiptSection" style="display:none;">
 
-  <h2>📄 My Receipts</h2>
+<div class="payment-card">
 
-  <ul id="memberReceiptList"></ul>
+  <h2>💳 Monthly Payment</h2>
+
+  <p id="memberDebtAmount">
+    1000 ETB
+  </p>
+
+  <button onclick="openPaymentModal()">
+    Pay Now
+  </button>
 
 </div>
-
-   <div class="bottom-menu">
+<div class="bottom-menu">
 
   <button onclick="showHome(); setActiveMenu(this)">
   🏠 Home
@@ -240,14 +245,20 @@ Create New Account
   👤 Profile
 </button>
 
+<button onclick="openNotifications()" id="notificationBtn">
+    🔔 Notifications
+    <span id="notificationBadge" class="badge">0</span>
+</button>
+
 </div> 
-    <button onclick="logout()"
+<button onclick="logout()"
     style="margin-bottom:120px;"
     >
       logout
     </button>
 
   </div>
+
  <div id="memberReceiptSection" style="display:none;">
 
   <h2>📄 My Receipts</h2>
@@ -255,6 +266,25 @@ Create New Account
   <ul id="memberReceiptList"></ul>
 
 </div>
+
+<div id="notificationsPage" style="display:none;">
+<button onclick="backToMemberDashboard()" class="green-btn">
+    ← Back
+</button>
+
+<h2>🔔 Notifications</h2>
+
+<div id="notificationList"></div>
+
+</div>
+
+
+</div>
+
+
+
+
+   
 
   <!-- ADMIN APP -->
 
@@ -269,7 +299,12 @@ Create New Account
       <button onclick="showSection('dashboard')">
         Dashboard
       </button>
+    
+      <button onclick="openPendingPayments()">
 
+      💳 Pending Payments
+
+      </button>
       <button onclick="showSection('members')">
         Members
       </button>
@@ -319,6 +354,22 @@ Create New Account
         <div id="groupStats"></div>
 
       </div>
+
+<div id="pendingPaymentsPage" style="display:none;">
+
+    <div class="page-header">
+
+        <button onclick="backToAdminDashboard()">
+            ← Back
+        </button>
+
+        <h2>💳 Pending Payments</h2>
+
+    </div>
+
+    <div id="pendingPaymentsList"></div>
+
+</div>
 
 <div id="pendingMembersPage" style="display:none;">
 
@@ -544,37 +595,67 @@ Create New Account
 
     </div>
 
+  
+</div>
+
+
+<div id="paymentModal" class="payment-modal">
+
+  <div class="payment-content">
+
+    <h2>Choose Payment Method</h2>
+
+    <select id="paymentMethod">
+
+      <option value="">Select Method</option>
+
+      <option value="Telebirr">
+        Telebirr
+      </option>
+
+      <option value="CBE">
+        CBE Birr
+      </option>
+
+      <option value="Bank">
+        Bank Transfer
+      </option>
+
+      <option value="Chapa">
+        Chapa
+      </option>
+
+    </select>
+
+    <label>Payment Amount (ETB)</label>
+
+<input
+    type="number"
+    id="paymentAmount"
+    placeholder="Enter amount"
+    min="1">
+
+    <input
+      type="file"
+      id="paymentReceipt"
+      accept="image/*"
+    >
+
+    <button onclick="submitPayment()">
+      Submit Payment
+    </button>
+
+    <button onclick="closePaymentModal()">
+      Cancel
+    </button>
+
   </div>
 
-  
- <div
-  id="paymentModal"
-  style="
-    display:none;
-    position:fixed;
-    top:0;
-    left:0;
-    width:100%;
-    height:100%;
-    background:rgba(0,0,0,0.5);
-  "
->
-
-  <div
-    style="
-      background:white;
-      width:350px;
-      margin:100px auto;
-      padding:20px;
-      border-radius:10px;
-    "
-  >
-
-    
-
 </div>
-</div>
-<div id="editMemberModal" class="modal">
+
+
+
+<div id="editMemberModal" class="modal" style="display: none;">
 
   <div class="modal-content">
 
@@ -620,10 +701,23 @@ Create New Account
 
 </div>
 
+
+<div id="receiptModal" class="modal" style="display:none;">
+
+  <div class="modal-content">
+
+    <button onclick="closeReceiptModal()">
+      ✖ Close
+    </button>
+
+    <img
+      id="receiptImage"
+      style="width:100%;max-height:80vh;object-fit:contain;"
+    >
+
   </div>
 
 </div>
-
 
 
   <script type="module" src="firebase.js"></script>

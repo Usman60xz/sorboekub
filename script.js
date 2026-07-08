@@ -89,7 +89,8 @@ import {
   doc,
   updateDoc,
   setDoc,
-  deleteDoc
+  deleteDoc,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
 import {
@@ -504,6 +505,8 @@ async function loadApp(){
 
   await loadMembersFromFirebase();
 
+  await loadReceiptsFromFirebase();
+
   const receiptList =
   document.getElementById("receiptList");
   const memberList =
@@ -857,7 +860,8 @@ function showSection(section){
   document.getElementById("membersSection").style.display = "none";
   document.getElementById("receiptsPage").style.display = "none";
   document.getElementById("pendingMembersPage").style.display = "none";
-
+document.getElementById("pendingPaymentsPage")
+        .style.display = "none";
   
 
   if(section === "dashboard"){
@@ -898,12 +902,10 @@ if (memberDoc.exists()) {
   "Member ID: EQB-" +
   (member.id || member.docId);
    
-  document.getElementById(
-  "totalPayments"
-).innerText =
-  member.payments
-    ? member.payments.length
-    : 0;
+  document.getElementById("totalPayments").innerText =
+  receipts.filter(
+    r => r.memberId === member.docId
+  ).length;
 
 document.getElementById(
   "currentDebt"
@@ -1070,6 +1072,8 @@ lastTenReceipts.forEach((receipt) => {
   memberReceiptList.appendChild(li);
 
 });
+
+updateNotificationBadge(member.docId);
 }
 window.showMemberInfo = showMemberInfo;
 
@@ -1754,6 +1758,8 @@ function showPendingMembers(){
     document.getElementById("dashboardSection").style.display="none";
     document.getElementById("membersSection").style.display="none";
     document.getElementById("receiptsPage").style.display="none";
+    document.getElementById("pendingPaymentsPage")
+        .style.display = "none";
 
     document.getElementById("pendingMembersPage").style.display="block";
 
@@ -1886,6 +1892,497 @@ async function forgotPassword(){
   }
    
 }
+
+function openPaymentModal(){
+
+document.getElementById("paymentModal").style.display="flex";
+
+ document.getElementById("paymentAmount").value = "";
+
+}
+window.openPaymentModal = openPaymentModal;
+
+function closePaymentModal(){
+
+  document.getElementById("paymentModal").style.display = "none";
+
+  document.getElementById("paymentMethod").value = "";
+
+  document.getElementById("paymentReceipt").value = "";
+
+}
+
+window.closePaymentModal = closePaymentModal;
+
+;
+
+function openPendingPayments(){
+
+    document.getElementById("dashboardSection")
+        .style.display = "none";
+     document.getElementById("membersSection").style.display="none";
+    document.getElementById("receiptsPage").style.display="none";   
+
+    document.getElementById("pendingPaymentsPage")
+        .style.display = "block";
+
+    loadPendingPayments();
+
+}
+
+window.openPendingPayments = openPendingPayments;
+
+async function submitPayment() {
+
+  const method = document.getElementById("paymentMethod").value;
+
+  const file = document.getElementById("paymentReceipt").files[0];
+
+  if (!method) {
+    alert("Please select payment method.");
+    return;
+  }
+
+  if (!file) {
+    alert("Please upload payment receipt.");
+    return;
+  }
+
+
+
+  const reader = new FileReader();
+
+  reader.onload = async function(e) {
+
+    const memberName =
+      document.getElementById("memberName").innerText;
+
+    const member =
+      members.find(m => m.name === memberName);
+    
+
+    if (!member) {
+      alert("Member not found.");
+      return;
+    }
+
+    
+  const amount =
+      Number(
+       document.getElementById("paymentAmount").value
+     );  
+    if(amount <= 0){
+
+    alert("Enter valid amount");
+
+    return;
+
+}
+
+if(amount > member.debt){
+
+    alert("Amount cannot be greater than your debt.");
+
+    return;
+
+}
+
+    await addDoc(
+      collection(db, "paymentRequests"),
+      {
+
+        memberId: member.docId,
+
+        memberName: member.name,
+
+       amount: amount,
+
+        method: method,
+
+        receipt: e.target.result,
+
+        status: "Pending",
+
+        createdAt: new Date()
+
+      }
+    );
+
+    alert("Payment submitted successfully.");
+
+    closePaymentModal();
+
+  };
+
+  reader.readAsDataURL(file);
+
+}
+
+window.submitPayment = submitPayment;
+
+function backToAdminDashboard(){
+
+    document.getElementById("pendingPaymentsPage")
+        .style.display = "none";
+
+    document.getElementById("dashboardSection")
+        .style.display = "block";
+    
+    
+
+}
+
+
+window.backToAdminDashboard = backToAdminDashboard;
+
+async function loadPendingPayments(){
+
+    const list =
+        document.getElementById("pendingPaymentsList");
+
+    list.innerHTML = "";
+
+    const snapshot =
+        await getDocs(collection(db,"paymentRequests"));
+
+    snapshot.forEach((paymentDoc)=>{
+
+        const payment = paymentDoc.data();
+
+        if(payment.status !== "Pending") return;
+
+        list.innerHTML += `
+
+        <div class="payment-card">
+
+            <h3>${payment.memberName}</h3>
+
+            <p>
+                Amount:
+                ${payment.amount} ETB
+            </p>
+
+            <p>
+                Method:
+                ${payment.method}
+            </p>
+
+            <button
+            onclick="viewReceipt('${payment.receipt}')">
+
+            👁 View Receipt
+
+            </button>
+
+            <button
+            onclick="approvePayment('${paymentDoc.id}')">
+
+            ✅ Approve
+
+            </button>
+
+            <button
+            onclick="rejectPayment('${paymentDoc.id}')">
+
+            ❌ Reject
+
+            </button>
+
+        </div>
+
+        `;
+
+    });
+
+}
+
+window.loadPendingPayments = loadPendingPayments;
+
+
+async function approvePayment(requestId) {
+
+  try {
+
+    // 1. Get payment request
+    const requestRef = doc(db, "paymentRequests", requestId);
+    const requestSnap = await getDoc(requestRef);
+
+    if (!requestSnap.exists()) {
+      alert("Payment request not found");
+      return;
+    }
+
+    const request = requestSnap.data();
+
+    // 2. Get member
+    const memberRef = doc(db, "members", request.memberId);
+    const memberSnap = await getDoc(memberRef);
+
+    if (!memberSnap.exists()) {
+      alert("Member not found");
+      return;
+    }
+
+    const member = memberSnap.data();
+
+    // 3. Update debt
+    const newDebt = Math.max(
+      0,
+      (member.debt || 0) - Number(request.amount)
+    );
+
+    // 4. Update member
+    await updateDoc(memberRef, {
+      debt: newDebt
+    });
+
+    // 5. Save receipt
+    await addDoc(collection(db, "receipts"), {
+
+      id: Date.now(),
+      
+      member: request.memberName,
+      memberId: request.memberId,
+
+      amount: request.amount,
+
+      method: request.method,
+
+      receipt: request.receipt,
+
+      status: "Approved",
+
+      date: new Date().toLocaleDateString(),
+
+      createdAt: serverTimestamp()
+
+    });
+
+    await addDoc(collection(db, "notifications"), {
+
+  memberId: request.memberId,
+
+  title: "Payment Approved",
+
+  message: `Your payment of ${request.amount} ETB has been approved.`,
+
+  amount: request.amount,
+
+  status: "unread",
+
+  createdAt: serverTimestamp()
+
+});
+
+// Delete pending payment
+await deleteDoc(requestRef);
+
+// 🔥 Reload receipts from Firebase
+await loadReceiptsFromFirebase();
+
+// 🔥 Reload members
+await loadMembersFromFirebase();
+
+// 🔥 Reload pending payments
+await loadPendingPayments();
+
+// 🔥 Refresh UI
+loadApp();
+
+alert("Payment Approved Successfully");
+  } catch (error) {
+
+    console.error(error);
+
+    alert(error.message);
+
+  }
+
+}
+
+window.approvePayment = approvePayment;
+
+async function loadNotifications(memberId){
+
+    const list =
+        document.getElementById("notificationList");
+
+    list.innerHTML = "";
+
+    const snapshot =
+        await getDocs(collection(db,"notifications"));
+
+    snapshot.forEach(doc=>{
+
+        const notification = doc.data();
+
+        if(notification.memberId !== memberId) return;
+
+        list.innerHTML += `
+
+<div class="notification-card">
+
+    <h3>${notification.title}</h3>
+
+    <p>${notification.message}</p>
+
+    <small>
+        ${notification.amount || ""} ETB
+    </small>
+
+    <br>
+
+    <small>
+        ${notification.createdAt
+            ? notification.createdAt.toDate().toLocaleString()
+            : ""}
+    </small>
+
+</div>
+
+`;
+
+    });
+
+}
+
+async function openNotifications() {
+
+    document.getElementById("memberDashboard").style.display = "none";
+    document.getElementById("notificationsPage").style.display = "block";
+
+    const memberName =
+        document.getElementById("memberName").innerText;
+
+    const member =
+        members.find(m => m.name === memberName);
+
+    if(!member){
+        return;
+    }
+
+    loadNotifications(member.docId);
+
+    const snapshot =
+        await getDocs(collection(db,"notifications"));
+
+    snapshot.forEach(async (docSnap) => {
+
+        const notification = docSnap.data();
+
+        if(
+            notification.memberId === member.docId &&
+            notification.status === "unread"
+        ){
+
+            await updateDoc(
+                doc(db,"notifications",docSnap.id),
+                {
+                    status:"read"
+                }
+            );
+
+        }
+
+    });
+
+    updateNotificationBadge(member.docId);
+
+}
+
+window.openNotifications = openNotifications;
+function backToMemberDashboard(){
+
+    document.getElementById("notificationsPage").style.display = "none";
+
+    document.getElementById("memberDashboard").style.display = "block";
+
+}
+
+window.backToMemberDashboard = backToMemberDashboard;
+
+async function updateNotificationBadge(memberId){
+
+    let unread = 0;
+
+    const snapshot =
+        await getDocs(collection(db,"notifications"));
+
+    snapshot.forEach(doc=>{
+
+        const notification = doc.data();
+
+        if(
+            notification.memberId === memberId &&
+            notification.status === "unread"
+        ){
+            unread++;
+        }
+
+    });
+
+    const badge =
+        document.getElementById("notificationBadge");
+
+    if(unread > 0){
+
+        badge.style.display = "inline-block";
+
+        badge.innerText = unread;
+
+    }else{
+
+        badge.style.display = "none";
+
+    }
+
+}
+
+window.updateNotificationBadge = updateNotificationBadge;
+
+function viewReceipt(image){
+
+    document.getElementById("receiptImage").src = image;
+
+    document.getElementById("receiptModal").style.display = "flex";
+
+}
+
+window.viewReceipt = viewReceipt;
+
+function closeReceiptModal(){
+
+    document.getElementById("receiptModal").style.display = "none";
+
+}
+
+window.closeReceiptModal = closeReceiptModal;
+
+async function rejectPayment(requestId){
+
+    if(!confirm("Reject this payment?")) return;
+
+    try{
+
+        await deleteDoc(
+            doc(db,"paymentRequests",requestId)
+        );
+
+        alert("Payment Rejected");
+
+        loadPendingPayments();
+
+    }catch(err){
+
+        console.log(err);
+
+        alert(err.message);
+
+    }
+
+}
+
+window.rejectPayment = rejectPayment;
 
 window.forgotPassword = forgotPassword;
 window.addMember = addMember;
