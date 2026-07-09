@@ -334,19 +334,27 @@ button:hover{
 }
 
 .bottom-menu{
-  position:fixed;
-  bottom:0;
-  left:0;
-  width:100%;
-  display:flex;
-  justify-content:space-around;
-  background:white;
-  padding:12px;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 8px 0;
+  box-sizing: border-box;
+  z-index: 999;
 }
 
 .bottom-menu button{
-  background:none;
-  border:none;
+  flex: 1;
+  background: none;
+  border: none;
+  font-size: 12px;
+  padding: 8px 2px;
+  text-align: center;
+  cursor: pointer;
 }
 
 
