@@ -1498,7 +1498,7 @@ function showHome(){
 
 window.showHome = showHome;
 
-function showPayments(){
+function showpayments(){
   document
     .getElementById("paymentSection")
     .scrollIntoView({
@@ -1893,28 +1893,6 @@ async function forgotPassword(){
    
 }
 
-function openPaymentModal(){
-
-document.getElementById("paymentModal").style.display="flex";
-
- document.getElementById("paymentAmount").value = "";
-
-}
-window.openPaymentModal = openPaymentModal;
-
-function closePaymentModal(){
-
-  document.getElementById("paymentModal").style.display = "none";
-
-  document.getElementById("paymentMethod").value = "";
-
-  document.getElementById("paymentReceipt").value = "";
-
-}
-
-window.closePaymentModal = closePaymentModal;
-
-;
 
 function openPendingPayments(){
 
@@ -2383,6 +2361,51 @@ async function rejectPayment(requestId){
 }
 
 window.rejectPayment = rejectPayment;
+
+function showPayments(){
+
+    document.getElementById("memberDashboard").style.display = "none";
+
+    document.getElementById("memberReceiptSection").style.display = "none";
+
+    document.getElementById("notificationsPage").style.display = "none";
+
+    document.getElementById("paymentPage").style.display = "block";
+
+    const memberName =
+        document.getElementById("memberName").innerText;
+
+    const member =
+        members.find(m => m.name === memberName);
+
+    if(member){
+
+        document.getElementById("paymentDebt").innerText =
+            member.debt + " ETB";
+
+    }
+
+}
+window.showPayments = showPayments;
+
+function openPaymentPage(){
+
+    document.getElementById("memberDashboard").style.display = "none";
+
+    document.getElementById("paymentPage").style.display = "block";
+
+}
+
+function BackToMemberDashboard() {
+
+    document.getElementById("paymentPage").style.display = "none";
+
+    document.getElementById("memberDashboard").style.display = "block";
+
+}
+window.BackToMemberDashboard = BackToMemberDashboard;
+
+
 
 window.forgotPassword = forgotPassword;
 window.addMember = addMember;
