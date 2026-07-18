@@ -691,3 +691,160 @@ cursor:pointer;
     margin-bottom:15px;
 
 }
+
+.loading-overlay{
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:rgba(255,255,255,.8);
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    z-index:99999;
+}
+
+.loader{
+    width:55px;
+    height:55px;
+    border:6px solid #ddd;
+    border-top:6px solid #16a34a;
+    border-radius:50%;
+    animation:spin 1s linear infinite;
+    margin-bottom:15px;
+}
+
+@keyframes spin{
+    100%{
+        transform:rotate(360deg);
+    }
+}
+
+.loading-overlay p{
+    font-size:18px;
+    font-weight:bold;
+    color:#16a34a;
+}
+
+.offline-banner{
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    background:#dc2626;
+    color:white;
+    text-align:center;
+    padding:12px;
+    font-weight:bold;
+    z-index:999999;
+}
+
+#toastContainer{
+    position:fixed;
+    top:20px;
+    right:20px;
+    z-index:9999;
+}
+
+.toast{
+    min-width:320px;
+    margin-bottom:15px;
+    padding:18px;
+    color:#fff;
+    border-radius:12px;
+    font-size:16px;
+    font-weight:bold;
+    box-shadow:0 10px 25px rgba(0,0,0,.25);
+    animation:slideIn .4s ease;
+}
+
+.success{
+    background:#16a34a;
+}
+
+.error{
+    background:#dc2626;
+}
+
+.warning{
+    background:#f59e0b;
+}
+
+.info{
+    background:#2563eb;
+}
+
+@keyframes slideIn{
+    from{
+        transform:translateX(100%);
+        opacity:0;
+    }
+    to{
+        transform:translateX(0);
+        opacity:1;
+    }
+}
+
+.success-modal{
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,.45);
+    display:none;
+    justify-content:center;
+    align-items:center;
+    z-index:99999;
+}
+
+.success-box{
+    width:360px;
+    background:#222;
+    color:white;
+    border-radius:18px;
+    padding:40px;
+    text-align:center;
+    animation:popup .3s ease;
+}
+
+.success-icon{
+    width:90px;
+    height:90px;
+    margin:auto;
+    border-radius:50%;
+    background:#16a34a;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:48px;
+    margin-bottom:20px;
+}
+
+.success-box button{
+    margin-top:25px;
+    width:100%;
+    background:#16a34a;
+    color:white;
+    border:none;
+    padding:15px;
+    border-radius:10px;
+    font-size:18px;
+    cursor:pointer;
+}
+
+@keyframes popup{
+
+    from{
+        transform:scale(.6);
+        opacity:0;
+    }
+
+    to{
+        transform:scale(1);
+        opacity:1;
+    }
+
+}

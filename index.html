@@ -437,10 +437,10 @@ Create New Account
     type="text"
     id="receiptSearch"
     placeholder="Search receipt..."
-    onkeyup="loadReceiptsPage()"
+    onkeyup="searchReceipt()"
   >
 
-  <table class="member-table">
+    <table class="member-table">
 
     <thead>
       <tr>
@@ -451,9 +451,9 @@ Create New Account
         <th>Action</th>
       </tr>
     </thead>
-
-    <tbody id="receiptTable">
+<tbody id="receiptTable">
     </tbody>
+  
 
   </table>
 
@@ -715,7 +715,31 @@ Create New Account
 
 </div>
 
+<div id="toastContainer"></div>
 
+<div id="successModal" class="success-modal">
+
+  <div class="success-box">
+
+    <div class="success-icon">
+      ✔
+    </div>
+
+    <h2 id="successTitle">
+      Success
+    </h2>
+
+    <p id="successText">
+      Operation completed successfully.
+    </p>
+
+    <button onclick="closeSuccessModal()">
+      OK
+    </button>
+
+  </div>
+
+</div>
   <script type="module" src="firebase.js"></script>
   <script type="module" src="script.js"></script>
 
@@ -725,6 +749,14 @@ if ("serviceWorker" in navigator) {
 }
 </script>
 
+<div id="loadingOverlay" class="loading-overlay" style="display:none;">
+    <div class="loader"></div>
+    <p>Please wait...</p>
+</div>
+
+<div id="offlineBanner" style="display:none;" class="offline-banner">
+    📡 No Internet Connection
+</div>
 </body>
 
 </html>

@@ -207,7 +207,7 @@ async function login(){
 
   }else{
 
-    alert("Wrong Admin Login");
+    showerror("Wrong Admin Login");
 
   }
 
@@ -241,7 +241,7 @@ else if(role === "member"){
 
         if(!member){
 
-            alert("Your account is waiting for Admin approval.");
+            showWarning("Waiting for Admin Approval");
             return;
 
         }
@@ -261,12 +261,9 @@ else if(role === "member"){
 
     }catch(error){
 
-        console.log(error.code);
-        console.log(error.message);
+    showError(error);
 
-        alert("Wrong phone number or password.");
-
-    }
+}
 
 }
 }
@@ -292,7 +289,7 @@ async function signupMember(){
   const confirm = document.getElementById("signupConfirmPassword").value;
 
   if(password !== confirm){
-    alert("Passwords do not match");
+    showerror("Passwords do not match");
     return;
   }
 
@@ -323,15 +320,15 @@ document.getElementById("signupEmail").value.trim();
   }
 );
 
-alert("Registration submitted. Please wait for Admin approval.");  
+showSuccess("Registration submitted. Please wait for Admin approval.");  
 
-    alert("Account created successfully");
+    showSuccess("Account created successfully");
 
   }catch(error){
 
-    alert(error.message);
+    showError(error);
 
-  }
+}
 
 }
 window.signupMember = signupMember;
@@ -381,7 +378,7 @@ async function addMember(){
   const memberId = Date.now();
 
   if(name === "" || amount === "" || phone=== ""){
-    alert("Please fill all fields");
+    showWarning("Please fill all fields");
     return;
   }
 
@@ -431,8 +428,7 @@ async function addMember(){
 
     saveData();
 
-    loadApp();
-
+    refreshApp();
   };
 
   reader.readAsDataURL(file);
@@ -500,11 +496,171 @@ notifications.push(
 
 }
 
+function renderDashboard() {
+
+    document.getElementById("totalMembers").innerText =
+        members.length;
+
+    let totalMoney = 0;
+
+    members.forEach(member => {
+        totalMoney += Number(member.amount || 0);
+    });
+
+    document.getElementById("totalMoney").innerText =
+        totalMoney + " ETB";
+
+}
+
+function renderGroupStats(){
+
+    const groupStats =
+        document.getElementById("groupStats");
+
+    if(!groupStats) return;
+
+    const groups = {};
+
+    members.forEach((member)=>{
+
+        if(!groups[member.amount]){
+            groups[member.amount] = 0;
+        }
+
+        groups[member.amount]++;
+
+    });
+
+    groupStats.innerHTML = "";
+
+    for(const amount in groups){
+
+        groupStats.innerHTML += `
+            <div class="card">
+                <h3>${amount} ETB Group</h3>
+                <p>${groups[amount]} Members</p>
+            </div>
+        `;
+
+    }
+
+}
+
+
+function renderReceipts(){
+
+    const receiptList =
+        document.getElementById("receiptList");
+
+    if(!receiptList) return;
+
+    receiptList.innerHTML = "";
+
+    receipts.forEach((receipt)=>{
+
+        const li = document.createElement("li");
+
+        li.innerHTML = `
+            <strong>
+                Receipt #${receipt.id}
+            </strong>
+            <br>
+            Member: ${receipt.member}
+            <br>
+            Amount: ${receipt.amount} ETB
+            <br>
+            Status: ${receipt.status}
+            <br>
+            Date: ${receipt.date}
+        `;
+
+        receiptList.appendChild(li);
+
+    });
+
+}
+
+
+function renderMembers(){
+
+    const memberList =
+        document.getElementById("memberList");
+
+    if(!memberList) return;
+
+    memberList.innerHTML = "";
+
+    const start =
+        (currentPage - 1) * membersPerPage;
+
+    const end =
+        start + membersPerPage;
+
+    members
+        .slice(start,end)
+        .forEach((member,index)=>{
+
+            const realIndex = start + index;
+
+            const row =
+                document.createElement("tr");
+
+            row.innerHTML = `
+
+<td>
+<img
+src="${member.image}"
+width="50"
+height="50"
+style="border-radius:50%;">
+</td>
+
+<td>${member.name}</td>
+
+<td>${member.phone}</td>
+
+<td>${member.amount} ETB</td>
+
+<td>${member.status}</td>
+
+<td>
+
+<button onclick="quickPay(${realIndex})">
+Pay
+</button>
+
+<button onclick="viewPayments('${member.docId}')">
+History
+</button>
+
+<button onclick="editMemberProfile(${realIndex})">
+Profile
+</button>
+
+<button onclick="editImage(${realIndex})">
+Image
+</button>
+
+<button onclick="editDebt(${realIndex})">
+Debt
+</button>
+
+<button onclick="deleteMember(${realIndex})">
+Delete
+</button>
+
+</td>
+`;
+
+            memberList.appendChild(row);
+
+        });
+
+}
 
 async function loadApp(){
 
   await loadMembersFromFirebase();
-
   await loadReceiptsFromFirebase();
 
   const receiptList =
@@ -518,19 +674,9 @@ async function loadApp(){
   );
 
 
-if(paymentMember){
-  paymentMember.innerHTML = "";
-}
-  
-  if(receiptList){
-  receiptList.innerHTML = "";
-  } 
 
   memberList.innerHTML = "";
-  
-  if(receiptList){
-  receiptList.innerHTML = "";
-  }
+
   const paymentHistory =
   document.getElementById(
     "paymentHistory"
@@ -540,8 +686,6 @@ if(paymentHistory){
   paymentHistory.innerHTML = "";
 }
 
-
-  let totalMoney = 0;
 const start =
   (currentPage - 1) *
   membersPerPage;
@@ -549,16 +693,8 @@ const start =
 const end =
   start +
   membersPerPage;
-
- members
-  .slice(start,end)
-  .forEach((member,index) => {
-
-    const realIndex =
-      start + index;
-    const today =
-  new Date();
-  if(paymentMember){
+if(paymentMember){
+  paymentMember.innerHTML = "";
 
   members.forEach((member) => {
 
@@ -577,105 +713,8 @@ const end =
 
 }
 
-const due =
-  new Date(member.dueDate);
-
-let overdue = false;
-
-if(
-  due < today &&
-  member.status === "Unpaid"
-){
-  overdue = true;
-}
-
-   totalMoney += Number(member.amount || 0); 
-
-
-    const row =
-  document.createElement("tr");
-
-row.innerHTML = `
-
-<td>
-  <img
-    src="${member.image}"
-    width="50"
-    height="50"
-    style="border-radius:50%;"
-  >
-</td>
-
-<td>${member.name}</td>
-
-<td>${member.phone}</td>
-
-<td>${member.amount} ETB</td>
-
-<td>${member.status}</td>
-
-<td>
-  <button onclick="quickPay(${realIndex})">
-  Pay
-</button>
-
-<button onclick="viewPayments('${member.docId}')">
-  History
-</button>
-</button>
-  <button onclick="editMemberProfile(${realIndex})">
-  Profile
-</button>
-
-
-
-  <button onclick="editImage(${realIndex})">
-    Image
-  </button>
+ 
   
-  <button onclick="editDebt(${realIndex})">
-    Debt
-  </button>
-
-  
-
-  <button onclick="deleteMember(${realIndex})">
-    Delete
-  </button>
-
-</td>
-`;
-
-memberList.appendChild(row);
-
-  });
-  if(receiptList){
-
-  receipts.forEach((receipt) => {
-
-    const li =
-      document.createElement("li");
-
-    li.innerHTML = `
-      <strong>
-        Receipt #${receipt.id}
-      </strong>
-      <br>
-      Member: ${receipt.member}
-      <br>
-      Amount: ${receipt.amount} ETB
-      <br>
-      Status: ${receipt.status}
-      <br>
-      Date: ${receipt.date}
-    `;
-
-    receiptList.appendChild(li);
-
-  });
-
-  }
-
   if(paymentHistory){
 
   paymentHistory.innerHTML = "";
@@ -701,12 +740,7 @@ memberList.appendChild(row);
 
 }
 
-  document.getElementById("totalMembers")
-    .innerText = members.length;
 
-
-  document.getElementById("totalMoney")
-    .innerText = totalMoney + " ETB";
     
     const totalPages =
   Math.ceil(
@@ -725,38 +759,13 @@ if(pageInfo){
     `Page ${currentPage} of ${totalPages}`;
 
 }
-    const groupStats =
-  document.getElementById("groupStats");
+renderDashboard();
 
-if(groupStats){
+renderMembers();
 
-  const groups = {};
+renderReceipts();
 
-  members.forEach((member) => {
-
-    if(!groups[member.amount]){
-      groups[member.amount] = 0;
-    }
-
-    groups[member.amount]++;
-
-  });
-
-  groupStats.innerHTML = "";
-
-  for(const amount in groups){
-
-    groupStats.innerHTML += `
-      <div class="card">
-        <h3>${amount} ETB Group</h3>
-        <p>${groups[amount]} Members</p>
-      </div>
-    `;
-
-  }
-
-}
-
+renderGroupStats();
 }
 window.loadApp = loadApp;
 
@@ -775,9 +784,9 @@ async function deleteMember(index){
 
   await loadMembersFromFirebase();
 
-  loadApp();
+  refreshApp();
 
-  alert("Member deleted successfully");
+  showWarning("Member deleted successfully");
 
 }
 
@@ -822,38 +831,43 @@ function updateStats(){
 window.updateStats = updateStats;
 
 
-function searchMember(){
+function searchMember() {
 
-  const input =
-    document.getElementById("search")
-      .value
-      .toLowerCase();
+    const input = document
+        .getElementById("search")
+        .value
+        .trim()
+        .toLowerCase();
 
+    const rows =
+        document.querySelectorAll("#memberList tr");
 
-  const items =
-    document.querySelectorAll("#memberList tr");
+    rows.forEach((row) => {
 
+        const name =
+            row.children[1]
+            .innerText
+            .trim()
+            .toLowerCase();
 
-  items.forEach((item) => {
+        if (
+            input === "" ||
+            name.startsWith(input)
+        ) {
 
-    const text =
-      item.textContent.toLowerCase();
+            row.style.display = "";
 
+        } else {
 
-    if(text.includes(input)){
-      item.style.display = "flex";
-    }
+            row.style.display = "none";
 
-    else{
-      item.style.display = "flex";
-    }
+        }
 
-  });
+    });
 
 }
+
 window.searchMember = searchMember;
-
-
 function showSection(section){
 
    document.getElementById("dashboardSection").style.display = "none";
@@ -1078,37 +1092,7 @@ updateNotificationBadge(member.docId);
 window.showMemberInfo = showMemberInfo;
 
 
-function downloadPDF(){
 
-  const { jsPDF } = window.jspdf;
-
-  const doc = new jsPDF();
-
-
-  doc.setFontSize(20);
-
-  doc.text("Serbo Equb Report",20,20);
-
-
-  let y = 40;
-
-
-  members.forEach((member,index) => {
-
-    doc.text(
-      `${index + 1}. ${member.name} - ${member.amount} ETB - ${member.status}`,
-      20,
-      y
-    );
-
-    y += 10;
-
-  });
-
-
-  doc.save("Serbo-Equb-Report.pdf");
-
-}
 
 
 window.onload = function(){
@@ -1125,7 +1109,7 @@ async function changeProfilePicture() {
     document.getElementById("memberProfileInput").files[0];
 
   if (!file) {
-    alert("Select image first");
+    showerror("Select image first");
     return;
   }
 
@@ -1136,7 +1120,7 @@ async function changeProfilePicture() {
     const member = window.currentMember;
 
     if (!member) {
-      alert("Member not found.");
+      showerror("Member not found.");
       return;
     }
 
@@ -1164,15 +1148,13 @@ async function changeProfilePicture() {
 
       loadApp();
 
-      alert("Profile picture updated successfully.");
+      showSuccess("Profile picture updated successfully.");
 
-    } catch (error) {
+    } catch(error){
 
-      console.error(error);
+    showError(error);
 
-      alert("Failed to update profile picture.");
-
-    }
+}
 
   };
 
@@ -1214,7 +1196,7 @@ async function editImage(index){
 
       loadApp();
 
-      alert("Image updated");
+      showSuccess("Image updated");
 
     };
 
@@ -1265,6 +1247,7 @@ async function filterMembers(){
   });
 
 }
+window.filterMembers = filterMembers;
 function nextPage(){
 
   const totalPages =
@@ -1278,7 +1261,6 @@ function nextPage(){
     currentPage++;
 
     loadApp();
-
   }
 
 }
@@ -1391,7 +1373,7 @@ await loadReceiptsFromFirebase();
 await loadMembersFromFirebase();
   loadApp();
 
-  alert("Payment Recorded");
+  showSuccess("Payment Recorded");
 
 }
 window.quickPay = quickPay;
@@ -1407,7 +1389,7 @@ function viewPayments(docId) {
     !member.payments ||
     member.payments.length === 0
   ) {
-    alert("No payments found");
+    showerror("No payments found");
     return;
   }
 
@@ -1464,20 +1446,21 @@ async function startNewDay() {
 
   saveData();
 
-  await loadMembersFromFirebase();
+  
+loadMembersFromFirebase();
+ loadApp();
 
-  loadApp();
-
-  alert("New Equb Day Started");
+  showSuccess("New Equb Day Started");
 
 }
-window.onload = async function() {
+window.onload = async function(){
+    
 
   await loadEqubDay();
 
   loadApp();
 
-};
+}
 
 function showHome(){
 
@@ -1591,7 +1574,7 @@ async function editDebt(index){
 
   loadApp();
 
-  alert("Debt updated successfully");
+  showSuccess("Debt updated successfully");
 
 }
 window.editDebt = editDebt;
@@ -1670,7 +1653,7 @@ async function saveMemberEdit(){
 
   closeEditModal();
 
-  alert("Member Updated");
+  showInfo("Profile Updated");
 
 }
 
@@ -1749,6 +1732,7 @@ async function deleteReceipt(index){
   await loadReceiptsFromFirebase();
 
   loadReceiptsPage();
+  
 
 }
 window.deleteReceipt = deleteReceipt;
@@ -1849,7 +1833,7 @@ async function approveMember(id){
 
     loadApp();
 
-    alert("Member Approved");
+    showSuccess("Member Approved");
 
 }
 
@@ -1861,7 +1845,7 @@ async function rejectMember(id){
         doc(db,"pendingMembers",id)
     );
 
-    alert("Member Rejected");
+    showWarning("Member Rejected");
 
     loadPendingMembers();
 
@@ -1882,14 +1866,13 @@ async function forgotPassword(){
             email
         );
 
-        alert("Password reset link sent.");
+        showSuccess("Password reset link sent.");
 
     }catch(error){
 
-        console.log(error.code);
-        console.log(error.message);
- 
-  }
+    showError(error);
+
+}
    
 }
 
@@ -1917,12 +1900,12 @@ async function submitPayment() {
   const file = document.getElementById("paymentReceipt").files[0];
 
   if (!method) {
-    alert("Please select payment method.");
+    showWarning("Please select payment method.");
     return;
   }
 
   if (!file) {
-    alert("Please upload payment receipt.");
+    showerror("Please upload payment receipt");
     return;
   }
 
@@ -1940,7 +1923,7 @@ async function submitPayment() {
     
 
     if (!member) {
-      alert("Member not found.");
+      showerror("Member not found.");
       return;
     }
 
@@ -1951,15 +1934,14 @@ async function submitPayment() {
      );  
     if(amount <= 0){
 
-    alert("Enter valid amount");
-
+    showWarning("Enter valid amount.");
     return;
 
 }
 
 if(amount > member.debt){
 
-    alert("Amount cannot be greater than your debt.");
+    showerror("Amount cannot be greater than your debt.");
 
     return;
 
@@ -1986,9 +1968,14 @@ if(amount > member.debt){
       }
     );
 
-    alert("Payment submitted successfully.");
+    showSuccessModal(
+    "Payment Submitted",
+    "Your payment request has been sent successfully. Waiting for Admin Approval."
+);
 
+   setTimeout(() => {
     closePaymentModal();
+}, 500);
 
   };
 
@@ -2086,7 +2073,7 @@ async function approvePayment(requestId) {
     const requestSnap = await getDoc(requestRef);
 
     if (!requestSnap.exists()) {
-      alert("Payment request not found");
+      showWarning("Payment request not found");
       return;
     }
 
@@ -2097,7 +2084,7 @@ async function approvePayment(requestId) {
     const memberSnap = await getDoc(memberRef);
 
     if (!memberSnap.exists()) {
-      alert("Member not found");
+      showerror("Member not found");
       return;
     }
 
@@ -2165,16 +2152,14 @@ await loadMembersFromFirebase();
 await loadPendingPayments();
 
 // 🔥 Refresh UI
-loadApp();
+refreshApp();
 
-alert("Payment Approved Successfully");
-  } catch (error) {
+showSuccess("Payment Approved Successfully");
+  } catch(error){
 
-    console.error(error);
+    showError(error);
 
-    alert(error.message);
-
-  }
+}
 
 }
 
@@ -2346,17 +2331,15 @@ async function rejectPayment(requestId){
             doc(db,"paymentRequests",requestId)
         );
 
-        alert("Payment Rejected");
+        showWarning("Payment Rejected");
 
         loadPendingPayments();
 
-    }catch(err){
+      }catch(error){
 
-        console.log(err);
+    showError(error);
 
-        alert(err.message);
-
-    }
+}
 
 }
 
@@ -2405,6 +2388,195 @@ function BackToMemberDashboard() {
 }
 window.BackToMemberDashboard = BackToMemberDashboard;
 
+
+function showLoading(){
+    document.getElementById("loadingOverlay").style.display = "flex";
+}
+
+function hideLoading(){
+    document.getElementById("loadingOverlay").style.display = "none";
+}
+
+
+function checkInternet(){
+
+    const banner = document.getElementById("offlineBanner");
+
+    if(navigator.onLine){
+
+        banner.style.display = "none";
+
+    }else{
+
+        banner.style.display = "block";
+
+    }
+
+}
+
+window.addEventListener("online", checkInternet);
+window.addEventListener("offline", checkInternet);
+
+checkInternet();
+
+
+function showError(error){
+
+    console.error(error);
+
+    let message = "Something went wrong.";
+
+    switch(error.code){
+
+        case "auth/network-request-failed":
+            message = "No Internet Connection.";
+            break;
+
+        case "auth/user-not-found":
+            message = "Account not found.";
+            break;
+
+        case "auth/wrong-password":
+            message = "Wrong password.";
+            break;
+
+        case "auth/invalid-email":
+            message = "Invalid email.";
+            break;
+
+        case "permission-denied":
+            message = "Permission denied.";
+            break;
+
+        default:
+            message = error.message;
+    }
+
+    alert(message);
+
+}
+
+
+async function refreshApp(){
+
+    showLoading();
+
+    await loadEqubDay();
+
+    await loadMembersFromFirebase();
+
+    await loadReceiptsFromFirebase();
+
+    loadApp();
+
+    hideLoading();
+
+}
+
+function searchReceipt(){
+
+    const input =
+        document.getElementById("receiptSearch")
+        .value
+        .toLowerCase();
+
+    const rows =
+        document.querySelectorAll("#receiptTable tr");
+
+    rows.forEach((row)=>{
+
+        const text =
+            row.textContent.toLowerCase();
+
+        if(text.includes(input)){
+            row.style.display = "";
+        }else{
+            row.style.display = "none";
+        }
+
+    });
+
+}
+
+window.searchReceipt = searchReceipt;
+
+
+function showToast(message,type="success"){
+
+    const container =
+    document.getElementById("toastContainer");
+
+    const toast =
+    document.createElement("div");
+
+    toast.className =
+    "toast " + type;
+
+    toast.innerHTML = message;
+
+    container.appendChild(toast);
+
+    setTimeout(()=>{
+        toast.remove();
+    },3000);
+
+}
+
+function showSuccess(msg){
+    showToast("✅ " + msg,"success");
+}
+
+function showerror(msg){
+    showToast("❌ " + msg,"error");
+}
+
+function showWarning(msg){
+    showToast("⚠️ " + msg,"warning");
+}
+
+function showInfo(msg){
+    showToast("ℹ️ " + msg,"info");
+}
+
+
+function showSuccessModal(title,message){
+
+    document.getElementById("successTitle").innerText =
+    title;
+
+    document.getElementById("successText").innerText =
+    message;
+
+    document.getElementById("successModal").style.display =
+    "flex";
+
+}
+
+function closeSuccessModal(){
+
+    document.getElementById("successModal").style.display =
+    "none";
+closePaymentModal();
+
+}
+window.closeSuccessModal = closeSuccessModal;
+
+
+function closePaymentModal(){
+
+    document.getElementById("paymentPage").style.display = "none";
+
+    // Clear payment form
+    document.getElementById("paymentMethod").selectedIndex = 0;
+    document.getElementById("paymentAmount").value = "";
+    document.getElementById("paymentReceipt").value = "";
+
+  document.getElementById("memberDashboard").style.display = "block";
+
+    
+}
+
+window.closePaymentModal = closePaymentModal;
 
 
 window.forgotPassword = forgotPassword;
